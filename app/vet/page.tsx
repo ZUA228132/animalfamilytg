@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
@@ -6,7 +5,12 @@ import { Header } from '@/components/Header';
 import { useTelegramUser } from '@/components/TelegramProvider';
 import { supabase } from '@/lib/supabaseClient';
 import { useRouter } from 'next/navigation';
-import { hapticImpact, hapticSuccess, hapticError, hapticWarning } from '@/lib/telegram';
+import {
+  hapticImpact,
+  hapticSuccess,
+  hapticError,
+  hapticWarning,
+} from '@/lib/telegram';
 
 type ProfileRow = {
   id: string;
@@ -20,7 +24,7 @@ type ChatMessage = {
   text: string;
 };
 
-let msgIdCounter = 1;
+let msgCounter = 1;
 
 export default function VetPage() {
   const tgUser = useTelegramUser();
@@ -34,7 +38,7 @@ export default function VetPage() {
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    async function load() {
+    async function loadProfile() {
       if (!tgUser) {
         setLoading(false);
         return;
@@ -53,7 +57,7 @@ export default function VetPage() {
       }
       setLoading(false);
     }
-    load();
+    loadProfile();
   }, [tgUser]);
 
   useEffect(() => {
@@ -74,12 +78,12 @@ export default function VetPage() {
     hapticImpact('medium');
 
     const userMsg: ChatMessage = {
-      id: msgIdCounter++,
+      id: msgCounter++,
       from: 'user',
-      text
+      text,
     };
-
     setMessages((prev) => [...prev, userMsg]);
+
     setIsThinking(true);
     setErrorText(null);
 
@@ -87,7 +91,7 @@ export default function VetPage() {
       const res = await fetch('/api/vet', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question: text })
+        body: JSON.stringify({ question: text }),
       });
 
       if (!res.ok) {
@@ -97,19 +101,22 @@ export default function VetPage() {
       }
 
       const data = await res.json();
-      const answer: string = data.answer || 'Извините, что-то пошло не так. Попробуйте ещё раз.';
+      const answer: string =
+        data.answer ||
+        'Извините, что-то пошло не так. Попробуйте ещё раз чуть позже.';
 
       const stepanMsg: ChatMessage = {
-        id: msgIdCounter++,
+        id: msgCounter++,
         from: 'stepan',
-        text: answer
+        text: answer,
       };
-
       setMessages((prev) => [...prev, stepanMsg]);
       hapticSuccess();
     } catch (err) {
       console.error(err);
-      setErrorText('Не удалось получить ответ от Степана. Попробуйте ещё раз позже.');
+      setErrorText(
+        'Не удалось получить ответ от Степана. Попробуйте ещё раз позже.'
+      );
       hapticError();
     } finally {
       setIsThinking(false);
@@ -140,7 +147,7 @@ export default function VetPage() {
         </div>
 
         {loading && (
-          <p className="text-xs text-slate-500">Загрузка…</p>
+          <p className="text-xs text-slate-500">Загружаем данные…</p>
         )}
 
         {!loading && !tgUser && (
@@ -155,11 +162,13 @@ export default function VetPage() {
               Доступ к Степану только по премиум-подписке
             </h2>
             <p className="mt-2">
-              ИИ-ветеринар Степан доступен владельцам премиум-подписки Animal Family. Подписка открывает чат
-              со Степаном и даёт возможность размещать объявления о продаже и услугах.
+              ИИ-ветеринар Степан доступен владельцам премиум-подписки Animal
+              Family. Подписка открывает чат со Степаном и даёт возможность
+              размещать объявления о продаже и услугах.
             </p>
             <p className="mt-2 text-[11px] text-slate-600">
-              Ответы Степана носят рекомендательный характер и не заменяют очный приём у ветеринарного врача.
+              Ответы Степана носят рекомендательный характер и не заменяют очный
+              приём у ветеринарного врача.
             </p>
             {errorText && (
               <p className="mt-2 text-[11px] text-rose-500">{errorText}</p>
@@ -178,51 +187,53 @@ export default function VetPage() {
         )}
 
         {!loading && tgUser && isPremium && (
-          <section className="flex flex-col gap-3 rounded-3xl bg-white p-4 shadow-sm text-xs text-slate-700">
-            <div className="flex items-start gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#e0ecff] text-lg">
+          <section className="flex h-[calc(100vh-170px)] flex-col rounded-3xl bg-white p-4 shadow-sm">
+            {/* Шапка чата как в мессенджере */}
+            <div className="flex items-center gap-3 border-b border-slate-100 pb-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#e0ecff] text-lg">
                 🐾
               </div>
-              <div>
-                <h2 className="text-sm font-semibold text-slate-900">
-                  Чат с ИИ-ветеринаром Степаном
-                </h2>
-                <p className="mt-1 text-[11px] text-slate-600">
-                  Опишите проблему как можно подробнее: возраст, порода, симптомы, чем кормите, что уже
-                  предпринимали. Чем больше деталей — тем полезнее рекомендация.
-                </p>
-                <p className="mt-1 text-[10px] text-slate-500">
-                  Важно: Степан не ставит диагнозы и не заменяет очный приём у ветеринарного врача. Всегда
-                  консультируйтесь с живым специалистом.
-                </p>
+              <div className="flex flex-col">
+                <span className="text-sm font-semibold text-slate-900">
+                  Степан
+                </span>
+                <span className="text-[11px] text-emerald-500">
+                  онлайн
+                </span>
               </div>
             </div>
 
-            <div className="flex flex-col gap-3 rounded-2xl bg-slate-50 p-3">
-              <div
-                ref={scrollRef}
-                className="max-h-72 space-y-2 overflow-y-auto rounded-2xl bg-white p-2"
-              >
-                {messages.length === 0 && !isThinking && (
-                  <p className="text-[11px] text-slate-500">
-                    Задайте первый вопрос Степану. Например: «Котёнку 3 месяца, отказывается от корма и
-                    вялый. Что делать до визита к врачу?».
-                  </p>
-                )}
-                {messages.map((m) => (
-                  <div
-                    key={m.id}
-                    className={
-                      m.from === 'user'
-                        ? 'flex justify-end'
-                        : 'flex justify-start'
-                    }
-                  >
+            {/* Лента сообщений */}
+            <div
+              ref={scrollRef}
+              className="mt-3 flex-1 space-y-2 overflow-y-auto rounded-2xl bg-slate-50 p-2"
+            >
+              {messages.length === 0 && !isThinking && (
+                <div className="mx-auto max-w-[80%] rounded-2xl bg-white px-3 py-2 text-[11px] text-slate-500">
+                  Задайте первый вопрос Степану. Например: «Собаке 5 лет,
+                  начала хромать на заднюю лапу. Что можно сделать до визита в
+                  клинику?».
+                </div>
+              )}
+
+              {messages.map((m) => (
+                <div
+                  key={m.id}
+                  className={
+                    m.from === 'user' ? 'flex justify-end' : 'flex justify-start'
+                  }
+                >
+                  <div className="flex max-w-[80%] items-end gap-2">
+                    {m.from === 'stepan' && (
+                      <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#e0ecff] text-xs">
+                        🐾
+                      </div>
+                    )}
                     <div
                       className={
                         m.from === 'user'
-                          ? 'max-w-[80%] rounded-2xl bg-slate-900 px-3 py-2 text-[11px] text-white'
-                          : 'max-w-[80%] rounded-2xl bg-slate-100 px-3 py-2 text-[11px] text-slate-800'
+                          ? 'rounded-2xl bg-slate-900 px-3 py-2 text-[11px] text-white'
+                          : 'rounded-2xl bg-white px-3 py-2 text-[11px] text-slate-800'
                       }
                     >
                       {m.text.split('\n').map((line, idx) => (
@@ -230,40 +241,54 @@ export default function VetPage() {
                       ))}
                     </div>
                   </div>
-                ))}
-                {isThinking && (
-                  <div className="flex justify-start">
-                    <div className="flex items-center gap-1 rounded-2xl bg-slate-100 px-3 py-2 text-[10px] text-slate-500">
-                      <span className="inline-block h-1 w-1 animate-bounce rounded-full bg-slate-500" />
-                      <span className="inline-block h-1 w-1 animate-bounce rounded-full bg-slate-500 [animation-delay:0.12s]" />
-                      <span className="inline-block h-1 w-1 animate-bounce rounded-full bg-slate-500 [animation-delay:0.24s]" />
-                      <span>Степан думает…</span>
-                    </div>
-                  </div>
-                )}
-              </div>
+                </div>
+              ))}
 
-              <form onSubmit={handleSend} className="flex gap-2">
-                <textarea
-                  className="flex-1 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs outline-none focus:border-[#ff7a59]"
-                  rows={2}
-                  value={question}
-                  onChange={(e) => setQuestion(e.target.value)}
-                  placeholder="Опишите, что случилось с питомцем…"
-                  disabled={isThinking}
-                />
-                <button
-                  type="submit"
-                  className="inline-flex items-center rounded-2xl bg-slate-900 px-4 py-2 text-[11px] font-medium text-white disabled:opacity-60"
-                  disabled={isThinking}
-                >
-                  Отправить
-                </button>
-              </form>
-              {errorText && (
-                <p className="text-[11px] text-rose-500">{errorText}</p>
+              {isThinking && (
+                <div className="flex justify-start">
+                  <div className="flex max-w-[70%] items-center gap-2 rounded-2xl bg-white px-3 py-2 text-[10px] text-slate-500">
+                    <div className="flex items-center gap-1">
+                      <span className="inline-block h-1.5 w-1.5 animate-bounce rounded-full bg-slate-400" />
+                      <span className="inline-block h-1.5 w-1.5 animate-bounce rounded-full bg-slate-400 [animation-delay:0.12s]" />
+                      <span className="inline-block h-1.5 w-1.5 animate-bounce rounded-full bg-slate-400 [animation-delay:0.24s]" />
+                    </div>
+                    <span>Степан думает…</span>
+                  </div>
+                </div>
               )}
             </div>
+
+            {/* Поле ввода как в чатах */}
+            <form
+              onSubmit={handleSend}
+              className="mt-3 flex items-end gap-2 border-t border-slate-100 pt-3"
+            >
+              <textarea
+                className="max-h-24 flex-1 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs outline-none focus:border-[#ff7a59]"
+                rows={2}
+                value={question}
+                onChange={(e) => setQuestion(e.target.value)}
+                placeholder="Напишите сообщение Степану…"
+                disabled={isThinking}
+              />
+              <button
+                type="submit"
+                disabled={isThinking}
+                className="inline-flex h-9 items-center justify-center rounded-2xl bg-slate-900 px-4 text-[11px] font-medium text-white disabled:opacity-60"
+              >
+                Отправить
+              </button>
+            </form>
+
+            <p className="mt-2 text-[10px] leading-snug text-slate-500">
+              Важно: ответы Степана носят рекомендательный характер и не
+              заменяют очный приём у ветеринарного врача. При любых сомнениях
+              обращайтесь в клинику.
+            </p>
+
+            {errorText && (
+              <p className="mt-1 text-[11px] text-rose-500">{errorText}</p>
+            )}
           </section>
         )}
       </main>

@@ -96,24 +96,47 @@ export default function NewListingPage() {
 
     setIsSubmitting(true);
 
+    
     let imageUrl: string | null = null;
     if (imageFile) {
       try {
         const path = `listing-${profile.id}-${Date.now()}-${imageFile.name}`;
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('listings')
+
+        // Сначала пробуем загрузить в bucket "listings"
+        let usedBucket = 'listings';
+        let uploadErrorFinal: any = null;
+
+        const firstTry = await supabase.storage
+          .from(usedBucket)
           .upload(path, imageFile);
 
-        if (uploadError) {
-          console.error('Upload error', uploadError);
+        if (firstTry.error) {
+          console.error('Upload error to "listings" bucket', firstTry.error);
+          uploadErrorFinal = firstTry.error;
+
+          // Падаем обратно в bucket "pets", если он уже настроен (как для паспортов)
+          usedBucket = 'pets';
+          const secondTry = await supabase.storage
+            .from(usedBucket)
+            .upload(path, imageFile);
+
+          if (secondTry.error) {
+            console.error('Upload error to fallback "pets" bucket', secondTry.error);
+            uploadErrorFinal = secondTry.error;
+          } else {
+            uploadErrorFinal = null;
+          }
+        }
+
+        if (uploadErrorFinal) {
           setIsSubmitting(false);
-          setMessage('Не удалось загрузить фото. Попробуйте ещё раз или выберите другое изображение.');
+          setMessage('Не удалось загрузить фото. Проверьте настройки бакета в Supabase (listings или pets) и попробуйте ещё раз.');
           hapticError();
           return;
         }
 
         const { data: publicData } = supabase.storage
-          .from('listings')
+          .from(usedBucket)
           .getPublicUrl(path);
 
         if (!publicData || !publicData.publicUrl) {
@@ -134,7 +157,7 @@ export default function NewListingPage() {
       }
     }
 
-    const { error } = await supabase
+const { error } = await supabase
       .from('listings')
       .insert({
         owner_id: profile.id,

@@ -30,6 +30,31 @@ export default function ProfilePage() {
   const [message, setMessage] = useState<string | null>(null);
   const [premiumMessage, setPremiumMessage] = useState<string | null>(null);
 
+  const [premiumTapCount, setPremiumTapCount] = useState(0);
+
+  const isAdminCandidate =
+    profile && (profile.tg_id === 1046439138 || profile.tg_id === 7086128174);
+
+  function handlePremiumTap() {
+    hapticImpact('light');
+    if (!isAdminCandidate) {
+      return;
+    }
+    setPremiumTapCount((prev) => {
+      const next = prev + 1;
+      if (next >= 10) {
+        setPremiumTapCount(0);
+        router.push('/admin');
+      } else {
+        // через 3 секунды без нажатий счётчик обнуляем
+        setTimeout(() => {
+          setPremiumTapCount(0);
+        }, 3000);
+      }
+      return next;
+    });
+  }
+
   useEffect(() => {
     async function load() {
       if (!user) {
@@ -82,28 +107,37 @@ export default function ProfilePage() {
     }
   }
 
+  
   async function handleBuyPremium() {
     if (!profile) return;
     hapticImpact('medium');
     setPremiumMessage(null);
 
-    // Здесь сейчас упрощённая логика.
-    // В реальном приложении сюда нужно добавить оплату через Telegram Payments.
-    const { error } = await supabase
-      .from('profiles')
-      .update({ is_premium: true })
-      .eq('id', profile.id);
+    const url = 'https://pay.cloudtips.ru/p/da9ad578';
 
-    if (error) {
-      console.error(error);
-      setPremiumMessage('Не удалось активировать премиум. Попробуйте позже.');
-      hapticError();
-    } else {
-      setProfile((p) => (p ? { ...p, is_premium: true } : p));
-      setPremiumMessage('Премиум-подписка активирована.');
+    try {
+      if (
+        typeof window !== 'undefined' &&
+        (window as any).Telegram &&
+        (window as any).Telegram.WebApp &&
+        typeof (window as any).Telegram.WebApp.openLink === 'function'
+      ) {
+        (window as any).Telegram.WebApp.openLink(url);
+      } else if (typeof window !== 'undefined') {
+        window.open(url, '_blank');
+      }
+
+      setPremiumMessage(
+        'После оплаты премиума отправьте чек админу @aries_nik, и он вручную активирует подписку.'
+      );
       hapticSuccess();
+    } catch (error) {
+      console.error(error);
+      setPremiumMessage('Не удалось открыть платёжную страницу. Попробуйте позже.');
+      hapticError();
     }
   }
+
 
   return (
     <div className="min-h-screen bg-[#f9f4f0]">
@@ -210,7 +244,7 @@ export default function ProfilePage() {
             </div>
 
             {/* Блок премиум-подписки */}
-            <div className="rounded-3xl bg-gradient-to-r from-[#e0ecff] via-[#ffd1e3] to-[#ffe2cf] p-4 text-xs text-slate-700">
+            <div onClick={handlePremiumTap} className="rounded-3xl bg-gradient-to-r from-[#e0ecff] via-[#ffd1e3] to-[#ffe2cf] p-4 text-xs text-slate-700">
               <div className="flex items-start gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/80 text-lg">
                   🐾
