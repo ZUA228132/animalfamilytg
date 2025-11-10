@@ -1,69 +1,75 @@
-// lib/telegram.ts
-
-type TgWebApp = {
-  HapticFeedback?: {
-    impactOccurred?: (style: 'light' | 'medium' | 'heavy') => void;
-    notificationOccurred?: (type: 'success' | 'error' | 'warning') => void;
-  };
-  MainButton?: {
-    text: string;
-    show: () => void;
-    hide: () => void;
-    setParams?: (params: Record<string, any>) => void;
-  };
-  ready?: () => void;
-  close?: () => void;
+export type TelegramUser = {
+  id: number;
+  username?: string;
+  first_name?: string;
+  last_name?: string;
+  photo_url?: string;
 };
 
-// Безопасно получаем Telegram.WebApp и НЕ трогаем window на сервере
-function getTelegramWebApp(): TgWebApp | null {
+declare global {
+  interface Window {
+    Telegram?: {
+      WebApp?: {
+        initDataUnsafe?: {
+          user?: TelegramUser;
+        };
+        ready?: () => void;
+        expand?: () => void;
+        HapticFeedback?: {
+          impactOccurred?: (style: 'light' | 'medium' | 'heavy') => void;
+          notificationOccurred?: (type: 'error' | 'success' | 'warning') => void;
+        };
+      };
+    };
+  }
+}
+
+export function getTelegramUser(): TelegramUser | null {
   if (typeof window === 'undefined') return null;
-  const anyWindow = window as any;
-  return anyWindow.Telegram?.WebApp ?? null;
+  return window.Telegram?.WebApp?.initDataUnsafe?.user ?? null;
 }
 
-export function hapticImpact(style: 'light' | 'medium' | 'heavy' = 'medium') {
-  const tg = getTelegramWebApp();
+export function initTelegramWebApp() {
+  if (typeof window === 'undefined') return;
+  const webApp = window.Telegram?.WebApp;
+  if (!webApp) return;
+  webApp.ready?.();
+  webApp.expand?.();
+}
+
+function getHaptics() {
+  if (typeof window === 'undefined') return null;
+  return window.Telegram?.WebApp?.HapticFeedback ?? null;
+}
+
+// Лёгкий единичный виброотклик для кликов по кнопкам
+export function hapticImpact(style: 'light' | 'medium' | 'heavy' = 'light') {
   try {
-    tg?.HapticFeedback?.impactOccurred?.(style);
+    const h = getHaptics();
+    h?.impactOccurred?.(style);
   } catch {
-    // гасим любые ошибки, чтобы не ломать приложение
+    // молча игнорируем, если не поддерживается
   }
 }
 
+// Отдельные короткие шорткаты
 export function hapticSuccess() {
-  const tg = getTelegramWebApp();
   try {
-    tg?.HapticFeedback?.notificationOccurred?.('success');
-  } catch {
-    //
-  }
+    const h = getHaptics();
+    h?.notificationOccurred?.('success');
+  } catch {}
 }
 
 export function hapticError() {
-  const tg = getTelegramWebApp();
   try {
-    tg?.HapticFeedback?.notificationOccurred?.('error');
-  } catch {
-    //
-  }
+    const h = getHaptics();
+    h?.notificationOccurred?.('error');
+  } catch {}
 }
 
 export function hapticWarning() {
-  const tg = getTelegramWebApp();
   try {
-    tg?.HapticFeedback?.notificationOccurred?.('warning');
-  } catch {
-    //
-  }
-}
-
-// Опционально, если где-то пригодится
-export function closeWebApp() {
-  const tg = getTelegramWebApp();
-  try {
-    tg?.close?.();
-  } catch {
-    //
-  }
+    const h = getHaptics();
+    h?.notificationOccurred?.('warning');
+  } catch {}
 }
