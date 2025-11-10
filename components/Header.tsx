@@ -1,14 +1,12 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useTelegramUser } from '@/components/TelegramProvider';
 
 export function Header() {
   const user = useTelegramUser();
-
-  const profileHref = user?.username
-    ? `https://t.me/${user.username}`
-    : undefined;
+  const router = useRouter();
 
   return (
     <header className="w-full border-b border-slate-200 bg-[#fdf9f5]/80 backdrop-blur">
@@ -31,11 +29,7 @@ export function Header() {
         {user && (
           <button
             type="button"
-            onClick={() => {
-              if (profileHref) {
-                window.open(profileHref, '_blank');
-              }
-            }}
+            onClick={() => router.push('/profile')}
             className="flex items-center gap-2 rounded-full px-2 py-1 text-left transition hover:bg-slate-100 active:scale-[0.98]"
           >
             {user.photo_url && (

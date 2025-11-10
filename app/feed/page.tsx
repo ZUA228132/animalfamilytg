@@ -1,32 +1,69 @@
+'use client';
+
+import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { Header } from '@/components/Header';
 import { ListingCard } from '@/components/ListingCard';
 import Link from 'next/link';
 
-export const dynamic = 'force-dynamic';
+type Listing = {
+  id: string;
+  title: string;
+  description: string | null;
+  city: string | null;
+  price: number | null;
+  type: string | null;
+  created_at: string;
+  status: string;
+  contact_tg_username: string | null;
+  pet_passport?: {
+    name: string;
+  } | null;
+  owner?: {
+    badge: string | null;
+  } | null;
+};
 
-export default async function FeedPage() {
-  const { data: listings } = await supabase
-    .from('listings')
-    .select(
-      `
-      id,
-      title,
-      description,
-      city,
-      price,
-      type,
-      status,
-      created_at,
-      contact_tg_username,
-      pet_passport:pet_passport_id(name),
-      owner:owner_id(badge)
-    `
-    )
-    .eq('status', 'approved')
-    .order('created_at', { ascending: false });
+export default function FeedPage() {
+  const [listings, setListings] = useState<Listing[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const safeListings = listings ?? [];
+  useEffect(() => {
+    async function load() {
+      setLoading(true);
+      setError(null);
+      const { data, error } = await supabase
+        .from('listings')
+        .select(
+          `
+          id,
+          title,
+          description,
+          city,
+          price,
+          type,
+          status,
+          created_at,
+          contact_tg_username,
+          pet_passport:pet_passport_id(name),
+          owner:owner_id(badge)
+        `
+        )
+        .eq('status', 'approved')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Feed load error', error);
+        setError(error.message || 'Не удалось загрузить объявления.');
+      } else {
+        setListings((data as any) || []);
+      }
+      setLoading(false);
+    }
+
+    load();
+  }, []);
 
   return (
     <div className="min-h-screen bg-[#f9f4f0]">
@@ -47,11 +84,22 @@ export default async function FeedPage() {
             + Новое объявление
           </Link>
         </div>
+
+        {loading && (
+          <p className="text-xs text-slate-500">Загружаем объявления…</p>
+        )}
+
+        {error && !loading && (
+          <p className="mb-2 text-xs text-rose-500">
+            {error}
+          </p>
+        )}
+
         <div className="space-y-3">
-          {safeListings.length === 0 && (
+          {!loading && !error && listings.length === 0 && (
             <p className="text-xs text-slate-500">Пока нет одобренных объявлений.</p>
           )}
-          {safeListings.map((l: any) => (
+          {listings.map((l) => (
             <ListingCard key={l.id} listing={l} />
           ))}
         </div>

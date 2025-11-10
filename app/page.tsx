@@ -45,7 +45,7 @@ export default async function HomePage() {
               Создать объявление
             </Link>
             <Link
-              href="/passport/new"
+              href="/passport"
               className="inline-flex items-center rounded-full bg-slate-100 px-4 py-2 text-xs font-medium text-slate-800"
             >
               Цифровой паспорт питомца
