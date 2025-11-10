@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { Header } from '@/components/Header';
 import { useTelegramUser } from '@/components/TelegramProvider';
+import { useRouter } from 'next/navigation';
 
 type Listing = {
   id: string;
@@ -14,6 +15,7 @@ type Listing = {
 
 export default function AdminPage() {
   const user = useTelegramUser();
+  const router = useRouter();
   const [listings, setListings] = useState<Listing[]>([]);
   const [alertTitle, setAlertTitle] = useState('');
   const [alertMessage, setAlertMessage] = useState('');
@@ -118,6 +120,20 @@ export default function AdminPage() {
     <div className="min-h-screen bg-[#f9f4f0]">
       <Header />
       <main className="mx-auto max-w-5xl px-4 pb-8 pt-4">
+        <div className="mb-3 flex items-center justify-between">
+          <button
+            type="button"
+            onClick={() => router.back()}
+            className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-700 shadow-sm"
+          >
+            ← Назад
+          </button>
+          <h1 className="text-lg font-semibold text-slate-900">
+            Админ-панель
+          </h1>
+          <div className="w-16" />
+        </div>
+
         {loading && <p className="text-xs text-slate-500">Загрузка…</p>}
         {!loading && isAdmin === false && (
           <p className="text-xs text-slate-500">
@@ -126,10 +142,6 @@ export default function AdminPage() {
         )}
         {!loading && isAdmin && (
           <>
-            <h1 className="mb-3 text-lg font-semibold text-slate-900">
-              Админ-панель
-            </h1>
-
             {info && (
               <p className="mb-3 text-xs text-slate-700">
                 {info}

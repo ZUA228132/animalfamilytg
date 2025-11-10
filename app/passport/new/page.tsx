@@ -47,6 +47,7 @@ export default function NewPassportPage() {
   const [vaccinations, setVaccinations] = useState('');
   const [allergies, setAllergies] = useState('');
   const [phone, setPhone] = useState('+7');
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -71,12 +72,33 @@ export default function NewPassportPage() {
       .limit(1);
 
     if (profileError || !profiles || profiles.length === 0) {
+      console.error(profileError);
       setIsSubmitting(false);
       setMessage('Ошибка профиля пользователя.');
       return;
     }
 
     const profile = profiles[0];
+    let petPhotoUrl: string | null = null;
+
+    if (photoFile) {
+      const path = `pet-${profile.id}-${Date.now()}-${photoFile.name}`;
+      const { error: uploadError } = await supabase.storage
+        .from('pets')
+        .upload(path, photoFile);
+
+      if (uploadError) {
+        console.error(uploadError);
+        setIsSubmitting(false);
+        setMessage('Не удалось загрузить фото питомца.');
+        return;
+      }
+
+      const { data: publicData } = supabase.storage
+        .from('pets')
+        .getPublicUrl(path);
+      petPhotoUrl = publicData.publicUrl;
+    }
 
     const { error } = await supabase.from('pet_passports').insert({
       owner_id: profile.id,
@@ -85,14 +107,15 @@ export default function NewPassportPage() {
       breed,
       age_years: age ? Number(age) : null,
       vaccinations,
-      allergies, // телефон пока не сохраняем в таблицу, при желании можно добавить колонку owner_phone
+      allergies,
+      pet_photo_url: petPhotoUrl
     });
 
     setIsSubmitting(false);
 
     if (error) {
       console.error(error);
-      setMessage('Ошибка при создании паспорта.');
+      setMessage('Ошибка при создании паспорта. Подробности в консоли браузера.');
     } else {
       setMessage('Паспорт создан.');
       setTimeout(() => {
@@ -105,13 +128,35 @@ export default function NewPassportPage() {
     <div className="min-h-screen bg-[#f9f4f0]">
       <Header />
       <main className="mx-auto max-w-5xl px-4 pb-8 pt-4">
-        <h1 className="mb-3 text-lg font-semibold text-slate-900">
-          Цифровой паспорт питомца
-        </h1>
+        <div className="mb-3 flex items-center justify-between">
+          <button
+            type="button"
+            onClick={() => router.back()}
+            className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-700 shadow-sm"
+          >
+            ← Назад
+          </button>
+          <h1 className="text-lg font-semibold text-slate-900">
+            Цифровой паспорт питомца
+          </h1>
+          <div className="w-16" />
+        </div>
         <form
           className="space-y-3 rounded-3xl bg-white p-4 shadow-sm"
           onSubmit={handleSubmit}
         >
+          <div>
+            <label className="text-xs font-medium text-slate-700">Фото питомца</label>
+            <input
+              type="file"
+              accept="image/*"
+              className="mt-1 w-full text-xs text-slate-600"
+              onChange={(e) => {
+                const file = e.target.files?.[0] ?? null;
+                setPhotoFile(file);
+              }}
+            />
+          </div>
           <div>
             <label className="text-xs font-medium text-slate-700">Имя питомца</label>
             <input

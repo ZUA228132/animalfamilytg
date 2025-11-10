@@ -7,7 +7,6 @@ import { Header } from '@/components/Header';
 import { useRouter } from 'next/navigation';
 import { useTelegramUser } from '@/components/TelegramProvider';
 
-// Динамический импорт карты, только на клиенте
 const MapView = dynamic(
   () => import('@/components/MapView').then((m) => m.MapView),
   {
@@ -16,7 +15,7 @@ const MapView = dynamic(
       <div className="mt-3 rounded-3xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
         Загрузка карты…
       </div>
-    ),
+    )
   }
 );
 
@@ -54,6 +53,7 @@ export default function NewListingPage() {
       .limit(1);
 
     if (profileError || !profiles || profiles.length === 0) {
+      console.error(profileError);
       setIsSubmitting(false);
       setMessage('Ошибка профиля пользователя.');
       return;
@@ -78,7 +78,7 @@ export default function NewListingPage() {
 
     if (error) {
       console.error(error);
-      setMessage('Ошибка при создании объявления.');
+      setMessage('Ошибка при создании объявления. Подробности в консоли браузера.');
     } else {
       setMessage('Объявление отправлено на модерацию.');
       setTimeout(() => {
@@ -88,10 +88,20 @@ export default function NewListingPage() {
   }
 
   return (
-    <div className="min-х-screen bg-[#f9f4f0]">
+    <div className="min-h-screen bg-[#f9f4f0]">
       <Header />
       <main className="mx-auto max-w-5xl px-4 pb-8 pt-4">
-        <h1 className="mb-3 text-lg font-semibold text-slate-900">Новое объявление</h1>
+        <div className="mb-3 flex items-center justify-between">
+          <button
+            type="button"
+            onClick={() => router.back()}
+            className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-700 shadow-sm"
+          >
+            ← Назад
+          </button>
+          <h1 className="text-lg font-semibold text-slate-900">Новое объявление</h1>
+          <div className="w-16" />
+        </div>
         <form
           className="space-y-3 rounded-3xl bg-white p-4 shadow-sm"
           onSubmit={handleSubmit}

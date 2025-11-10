@@ -33,6 +33,12 @@ export default async function FeedPage() {
       <Header />
       <main className="mx-auto max-w-5xl px-4 pb-8 pt-4">
         <div className="mb-4 flex items-center justify-between">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-700 shadow-sm"
+          >
+            ← Назад
+          </Link>
           <h1 className="text-lg font-semibold text-slate-900">Лента объявлений</h1>
           <Link
             href="/listings/new"

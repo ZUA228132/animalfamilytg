@@ -30,6 +30,7 @@ export function TelegramProvider({ children }: { children: ReactNode }) {
         .then();
     }
 
+    // лёгкий прелоадер ~0.9с
     const timeout = setTimeout(() => {
       setReady(true);
     }, 900);
@@ -40,13 +41,42 @@ export function TelegramProvider({ children }: { children: ReactNode }) {
   if (!ready) {
     return (
       <div className="flex h-screen items-center justify-center bg-[#f9f4f0]">
-        <div className="flex flex-col items-center gap-3 rounded-3xl bg-white/95 px-6 py-5 shadow-sm">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#ff7a59] border-t-transparent" />
-          <div className="text-sm font-semibold text-slate-900">
-            {user?.first_name ? `Привет, ${user.first_name}!` : 'Привет!'}
-          </div>
-          <div className="text-xs text-slate-500">
-            Загружаем твою Animal Family…
+        <div className="animate-[fadeInUp_0.4s_ease-out] rounded-3xl bg-white/95 px-7 py-6 shadow-md">
+          <style jsx global>{`
+            @keyframes fadeInUp {
+              0% {
+                opacity: 0;
+                transform: translateY(8px) scale(0.98);
+              }
+              100% {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+              }
+            }
+          `}</style>
+          <div className="flex items-center gap-4">
+            {user?.photo_url ? (
+              <div className="relative">
+                <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-[#ffb899] to-[#ff7a59] opacity-60 blur-[4px]" />
+                <img
+                  src={user.photo_url}
+                  alt="avatar"
+                  className="relative h-12 w-12 rounded-full border-2 border-white object-cover shadow-sm"
+                />
+              </div>
+            ) : (
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#ffe2cf] text-sm font-semibold text-[#ff7a59]">
+                AF
+              </div>
+            )}
+            <div className="flex flex-col">
+              <span className="text-sm font-semibold text-slate-900">
+                {user?.first_name ? `Привет, ${user.first_name}!` : 'Привет!'}
+              </span>
+              <span className="mt-1 text-xs text-slate-500">
+                Загружаем твою Animal Family…
+              </span>
+            </div>
           </div>
         </div>
       </div>

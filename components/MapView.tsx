@@ -34,19 +34,42 @@ function LocationSelector({
 export function MapView({ onLocationChange }: MapViewProps) {
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [isClient, setIsClient] = useState(false);
+  const [geoError, setGeoError] = useState<string | null>(null);
 
-  useEffect(() => {
-    setIsClient(true);
-    if (!navigator.geolocation) return;
+  function requestGeo() {
+    setGeoError(null);
+    if (!('geolocation' in navigator)) {
+      setGeoError('Геолокация недоступна в этом устройстве.');
+      return;
+    }
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         const { latitude, longitude } = pos.coords;
         setCoords({ lat: latitude, lng: longitude });
         onLocationChange?.(latitude, longitude);
       },
-      () => {},
+      (err) => {
+        setGeoError('Не удалось получить геопозицию. Разрешите доступ к местоположению.');
+        console.warn(err);
+      },
       { enableHighAccuracy: true }
     );
+  }
+
+  useEffect(() => {
+    setIsClient(true);
+    // пробуем автоматически, но без ошибок, если не получилось
+    if ('geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const { latitude, longitude } = pos.coords;
+          setCoords({ lat: latitude, lng: longitude });
+          onLocationChange?.(latitude, longitude);
+        },
+        () => {},
+        { enableHighAccuracy: true }
+      );
+    }
   }, [onLocationChange]);
 
   if (!isClient) {
@@ -59,8 +82,17 @@ export function MapView({ onLocationChange }: MapViewProps) {
 
   return (
     <div className="mt-3 rounded-3xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
-      <div className="mb-2 text-[11px] font-medium text-slate-700">
-        Укажите точку на карте (место, связанное с объявлением).
+      <div className="mb-2 flex items-center justify-between">
+        <div className="text-[11px] font-medium text-slate-700">
+          Укажите точку на карте (место, связанное с объявлением).
+        </div>
+        <button
+          type="button"
+          onClick={requestGeo}
+          className="rounded-full bg-white px-3 py-1 text-[11px] font-medium text-slate-700 shadow-sm"
+        >
+          Определить местоположение
+        </button>
       </div>
       <div className="h-56 overflow-hidden rounded-2xl">
         <MapContainer
@@ -86,6 +118,11 @@ export function MapView({ onLocationChange }: MapViewProps) {
       {coords && (
         <div className="mt-2 text-[11px] text-slate-500">
           Выбранные координаты: {coords.lat.toFixed(5)} / {coords.lng.toFixed(5)}
+        </div>
+      )}
+      {geoError && (
+        <div className="mt-1 text-[11px] text-rose-500">
+          {geoError}
         </div>
       )}
     </div>
