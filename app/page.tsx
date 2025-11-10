@@ -40,8 +40,7 @@ export default async function HomePage() {
             Animal Family
           </h1>
           <p className="mt-2 text-sm text-slate-600">
-            Уютное пространство для владельцев животных внутри Telegram. Объявления, цифровые паспорта
-            и безопасная связь через Telegram.
+            Уютное пространство для владельцев животных внутри Telegram.
           </p>
           <div className="mt-4 flex flex-wrap gap-3 text-xs md:text-[13px]">
             <Link
@@ -112,7 +111,7 @@ export default async function HomePage() {
               Официальный бот: <span className="font-medium">@AnimalFamilyBot</span>
             </li>
             <li>Админ: @aries_nik (Telegram)</li>
-            <li>Поддержка: support@animal.family (пример)</li>
+            <li>Поддержка: support@animal.family</li>
             <li>Сайт: animal.family</li>
           </ul>
         </section>
