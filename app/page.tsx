@@ -28,8 +28,8 @@ export default async function HomePage() {
             Добро пожаловать в <span className="text-[#ff7a59]">Animal Family</span>
           </h1>
           <p className="mt-2 text-sm text-slate-600">
-            Сообщество владельцев животных: объявления как на Авито, цифровые паспорта
-            питомцев и безопасная связь через Telegram.
+            Animal Family — уютное пространство для владельцев животных внутри Telegram.
+            Создавайте объявления, делитесь историями и заботьтесь о своих хвостах вместе с сообществом.
           </p>
           <div className="mt-4 flex flex-wrap gap-3">
             <Link
@@ -49,12 +49,6 @@ export default async function HomePage() {
               className="inline-flex items-center rounded-full bg-slate-100 px-4 py-2 text-xs font-medium text-slate-800"
             >
               Цифровой паспорт питомца
-            </Link>
-            <Link
-              href="/admin"
-              className="inline-flex items-center rounded-full bg-slate-200 px-4 py-2 text-xs font-medium text-slate-700"
-            >
-              Админ-панель
             </Link>
           </div>
         </section>

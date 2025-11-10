@@ -110,7 +110,7 @@ export default function NewListingPage() {
                 className="mt-1 w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-[#ff7a59]"
                 value={city}
                 onChange={(e) => setCity(e.target.value)}
-                placeholder="Киев"
+                placeholder="Москва"
                 required
               />
             </div>

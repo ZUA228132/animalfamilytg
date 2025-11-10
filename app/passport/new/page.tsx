@@ -6,6 +6,37 @@ import { Header } from '@/components/Header';
 import { useRouter } from 'next/navigation';
 import { useTelegramUser } from '@/components/TelegramProvider';
 
+const SPECIES_OPTIONS = [
+  'Собака',
+  'Кошка',
+  'Птица',
+  'Грызун',
+  'Рептилия',
+  'Рыба',
+  'Другое'
+];
+
+const VACCINATION_OPTIONS = [
+  'Не указано',
+  'Бешенство',
+  'Комплексная вакцина',
+  'Чумка / парвовирус',
+  'Вакцина от клещей',
+  'Другое'
+];
+
+const ALLERGY_OPTIONS = [
+  'Нет аллергий',
+  'Пыльца',
+  'Пыль',
+  'Курица',
+  'Говядина',
+  'Зерновые',
+  'Молочные продукты',
+  'Укусы насекомых',
+  'Другое'
+];
+
 export default function NewPassportPage() {
   const router = useRouter();
   const user = useTelegramUser();
@@ -15,7 +46,7 @@ export default function NewPassportPage() {
   const [age, setAge] = useState('');
   const [vaccinations, setVaccinations] = useState('');
   const [allergies, setAllergies] = useState('');
-  const [phone, setPhone] = useState('');
+  const [phone, setPhone] = useState('+7');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -55,7 +86,8 @@ export default function NewPassportPage() {
       age_years: age ? Number(age) : null,
       vaccinations,
       allergies
-    });
+      -- телефон пока не сохраняем в таблицу, при желании можно добавить колонку owner_phone
+    } as any);
 
     setIsSubmitting(false);
 
@@ -94,12 +126,18 @@ export default function NewPassportPage() {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-xs font-medium text-slate-700">Вид</label>
-              <input
+              <select
                 className="mt-1 w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-[#ff7a59]"
                 value={species}
                 onChange={(e) => setSpecies(e.target.value)}
-                placeholder="Собака, кот, попугай…"
-              />
+              >
+                <option value="">Выберите вид</option>
+                {SPECIES_OPTIONS.map((opt) => (
+                  <option key={opt} value={opt}>
+                    {opt}
+                  </option>
+                ))}
+              </select>
             </div>
             <div>
               <label className="text-xs font-medium text-slate-700">Порода</label>
@@ -128,29 +166,39 @@ export default function NewPassportPage() {
                 className="mt-1 w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-[#ff7a59]"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                placeholder="+380..."
+                placeholder="+7..."
               />
             </div>
           </div>
           <div>
             <label className="text-xs font-medium text-slate-700">Прививки</label>
-            <textarea
+            <select
               className="mt-1 w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-[#ff7a59]"
               value={vaccinations}
               onChange={(e) => setVaccinations(e.target.value)}
-              rows={2}
-              placeholder="Например: бешенство (2023), комплексная (2024)"
-            />
+            >
+              <option value="">Выберите основную прививку</option>
+              {VACCINATION_OPTIONS.map((opt) => (
+                <option key={opt} value={opt}>
+                  {opt}
+                </option>
+              ))}
+            </select>
           </div>
           <div>
             <label className="text-xs font-medium text-slate-700">Аллергии</label>
-            <textarea
+            <select
               className="mt-1 w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-[#ff7a59]"
               value={allergies}
               onChange={(e) => setAllergies(e.target.value)}
-              rows={2}
-              placeholder="На курицу, говядину, пыльцу и т.д."
-            />
+            >
+              <option value="">Выберите основную аллергию</option>
+              {ALLERGY_OPTIONS.map((opt) => (
+                <option key={opt} value={opt}>
+                  {opt}
+                </option>
+              ))}
+            </select>
           </div>
 
           {message && (
