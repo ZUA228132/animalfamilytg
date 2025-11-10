@@ -159,7 +159,7 @@ export default function ListingDetailPage() {
               </section>
             )}
 
-            <section className="flex items-center justify-between text-[11px] text-slate-600">
+            <section className="mt-2 flex flex-col gap-2 text-[11px] text-slate-600 sm:flex-row sm:items-center sm:justify-between">
               {listing.contact_tg_username && (
                 <a
                   href={`https://t.me/${listing.contact_tg_username}`}
