@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
+import { hapticImpact } from '@/lib/telegram';
 
 type MapViewProps = {
   onLocationChange?: (lat: number, lng: number) => void;
@@ -25,6 +26,7 @@ function LocationSelector({
 }) {
   useMapEvents({
     click(e) {
+      hapticImpact('light');
       onLocationChange?.(e.latlng.lat, e.latlng.lng);
     }
   });
@@ -42,6 +44,7 @@ export function MapView({ onLocationChange }: MapViewProps) {
       setGeoError('Геолокация недоступна в этом устройстве.');
       return;
     }
+    hapticImpact('light');
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         const { latitude, longitude } = pos.coords;
@@ -58,7 +61,6 @@ export function MapView({ onLocationChange }: MapViewProps) {
 
   useEffect(() => {
     setIsClient(true);
-    // пробуем автоматически, но без ошибок, если не получилось
     if ('geolocation' in navigator) {
       navigator.geolocation.getCurrentPosition(
         (pos) => {

@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTelegramUser } from '@/components/TelegramProvider';
+import { hapticImpact } from '@/lib/telegram';
 
 export function Header() {
   const user = useTelegramUser();
@@ -12,7 +13,11 @@ export function Header() {
     <header className="w-full border-b border-slate-200 bg-[#fdf9f5]/80 backdrop-blur">
       <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
         <div className="flex items-center gap-2">
-          <Link href="/" className="flex items-center gap-2">
+          <Link
+            href="/"
+            onClick={() => hapticImpact('light')}
+            className="flex items-center gap-2"
+          >
             <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-[#ffe2cf] text-sm font-bold text-[#ff7a59]">
               AF
             </div>
@@ -29,7 +34,10 @@ export function Header() {
         {user && (
           <button
             type="button"
-            onClick={() => router.push('/profile')}
+            onClick={() => {
+              hapticImpact('light');
+              router.push('/profile');
+            }}
             className="flex items-center gap-2 rounded-full px-2 py-1 text-left transition hover:bg-slate-100 active:scale-[0.98]"
           >
             {user.photo_url && (

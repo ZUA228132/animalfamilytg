@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { Header } from '@/components/Header';
 import { useTelegramUser } from '@/components/TelegramProvider';
 import { useRouter } from 'next/navigation';
+import { hapticImpact, hapticSuccess, hapticError } from '@/lib/telegram';
 
 type Profile = {
   id: string;
@@ -56,6 +57,7 @@ export default function ProfilePage() {
     if (!profile) return;
     setSaving(true);
     setMessage(null);
+    hapticImpact('medium');
 
     const { error } = await supabase
       .from('profiles')
@@ -71,8 +73,10 @@ export default function ProfilePage() {
     if (error) {
       console.error(error);
       setMessage('Не удалось сохранить профиль.');
+      hapticError();
     } else {
       setMessage('Профиль обновлён.');
+      hapticSuccess();
     }
   }
 
@@ -83,7 +87,10 @@ export default function ProfilePage() {
         <div className="mb-3 flex items-center justify-between">
           <button
             type="button"
-            onClick={() => router.back()}
+            onClick={() => {
+              hapticImpact('light');
+              router.back();
+            }}
             className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-700 shadow-sm"
           >
             ← Назад

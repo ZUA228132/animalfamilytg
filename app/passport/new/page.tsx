@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { Header } from '@/components/Header';
 import { useRouter } from 'next/navigation';
 import { useTelegramUser } from '@/components/TelegramProvider';
+import { hapticImpact, hapticSuccess, hapticError, hapticWarning } from '@/lib/telegram';
 
 const SPECIES_OPTIONS = [
   'Собака',
@@ -53,12 +54,16 @@ export default function NewPassportPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    hapticImpact('medium');
+
     if (!user) {
       setMessage('Ошибка: Telegram-пользователь не определен.');
+      hapticError();
       return;
     }
     if (!name) {
       setMessage('Укажите имя питомца.');
+      hapticWarning();
       return;
     }
 
@@ -75,6 +80,7 @@ export default function NewPassportPage() {
       console.error(profileError);
       setIsSubmitting(false);
       setMessage('Ошибка профиля пользователя.');
+      hapticError();
       return;
     }
 
@@ -117,8 +123,10 @@ export default function NewPassportPage() {
     if (error) {
       console.error(error);
       setMessage('Ошибка при создании паспорта. Подробности в консоли браузера.');
+      hapticError();
     } else {
       setMessage('Паспорт создан.');
+      hapticSuccess();
       setTimeout(() => {
         router.push('/passport');
       }, 1200);
@@ -132,7 +140,10 @@ export default function NewPassportPage() {
         <div className="mb-3 flex items-center justify-between">
           <button
             type="button"
-            onClick={() => router.back()}
+            onClick={() => {
+              hapticImpact('light');
+              router.back();
+            }}
             className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-700 shadow-sm"
           >
             ← Назад
@@ -155,6 +166,7 @@ export default function NewPassportPage() {
               onChange={(e) => {
                 const file = e.target.files?.[0] ?? null;
                 setPhotoFile(file);
+                if (file) hapticImpact('light');
               }}
             />
           </div>

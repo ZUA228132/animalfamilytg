@@ -6,17 +6,11 @@ import { supabase } from '@/lib/supabaseClient';
 import { Header } from '@/components/Header';
 import { useRouter } from 'next/navigation';
 import { useTelegramUser } from '@/components/TelegramProvider';
+import { hapticImpact, hapticSuccess, hapticError } from '@/lib/telegram';
 
 const MapView = dynamic(
   () => import('@/components/MapView').then((m) => m.MapView),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="mt-3 rounded-3xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
-        Загрузка карты…
-      </div>
-    )
-  }
+  { ssr: false }
 );
 
 export default function NewListingPage() {
@@ -27,6 +21,7 @@ export default function NewListingPage() {
   const [city, setCity] = useState('');
   const [type, setType] = useState('adoption');
   const [price, setPrice] = useState('');
+  const [imageFile, setImageFile] = useState<File | null>(null);
   const [lat, setLat] = useState<number | null>(null);
   const [lng, setLng] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -34,12 +29,16 @@ export default function NewListingPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    hapticImpact('medium');
+
     if (!user) {
       setMessage('Ошибка: Telegram-пользователь не определен.');
+      hapticError();
       return;
     }
     if (!title || !city) {
       setMessage('Заполните название и город.');
+      hapticWarning();
       return;
     }
 
@@ -56,10 +55,32 @@ export default function NewListingPage() {
       console.error(profileError);
       setIsSubmitting(false);
       setMessage('Ошибка профиля пользователя.');
+      hapticError();
       return;
     }
 
     const profile = profiles[0];
+
+    let imageUrl: string | null = null;
+    if (imageFile) {
+      try {
+        const path = `listing-${profile.id}-${Date.now()}-${imageFile.name}`;
+        const { error: uploadError } = await supabase.storage
+          .from('listings')
+          .upload(path, imageFile);
+
+        if (uploadError) {
+          console.error('Upload listing image error', uploadError);
+        } else {
+          const { data: publicData } = supabase.storage
+            .from('listings')
+            .getPublicUrl(path);
+          imageUrl = publicData.publicUrl;
+        }
+      } catch (err) {
+        console.error('Unexpected listing upload error', err);
+      }
+    }
 
     const { error } = await supabase.from('listings').insert({
       owner_id: profile.id,
@@ -71,7 +92,8 @@ export default function NewListingPage() {
       lat,
       lng,
       status: 'pending',
-      contact_tg_username: profile.tg_username ?? user.username ?? null
+      contact_tg_username: profile.tg_username ?? user.username ?? null,
+      image_url: imageUrl
     });
 
     setIsSubmitting(false);
@@ -79,8 +101,10 @@ export default function NewListingPage() {
     if (error) {
       console.error(error);
       setMessage('Ошибка при создании объявления. Подробности в консоли браузера.');
+      hapticError();
     } else {
       setMessage('Объявление отправлено на модерацию.');
+      hapticSuccess();
       setTimeout(() => {
         router.push('/feed');
       }, 1200);
@@ -94,7 +118,10 @@ export default function NewListingPage() {
         <div className="mb-3 flex items-center justify-between">
           <button
             type="button"
-            onClick={() => router.back()}
+            onClick={() => {
+              hapticImpact('light');
+              router.back();
+            }}
             className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-700 shadow-sm"
           >
             ← Назад
@@ -106,6 +133,19 @@ export default function NewListingPage() {
           className="space-y-3 rounded-3xl bg-white p-4 shadow-sm"
           onSubmit={handleSubmit}
         >
+          <div>
+            <label className="text-xs font-medium text-slate-700">Фото</label>
+            <input
+              type="file"
+              accept="image/*"
+              className="mt-1 w-full text-xs text-slate-600"
+              onChange={(e) => {
+                const file = e.target.files?.[0] ?? null;
+                setImageFile(file);
+                if (file) hapticImpact('light');
+              }}
+            />
+          </div>
           <div>
             <label className="text-xs font-medium text-slate-700">Заголовок</label>
             <input
@@ -138,7 +178,7 @@ export default function NewListingPage() {
               />
             </div>
             <div>
-              <label className="text-xs font-medium text-slate-700">Тип</label>
+              <label className="text-xs font-medium text-slate-700">Категория</label>
               <select
                 className="mt-1 w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-[#ff7a59]"
                 value={type}

@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { Header } from '@/components/Header';
 import { useTelegramUser } from '@/components/TelegramProvider';
 import { useRouter } from 'next/navigation';
+import { hapticImpact, hapticSuccess, hapticError } from '@/lib/telegram';
 
 type Listing = {
   id: string;
@@ -17,29 +18,29 @@ export default function AdminPage() {
   const user = useTelegramUser();
   const router = useRouter();
   const [listings, setListings] = useState<Listing[]>([]);
-  const [alertTitle, setAlertTitle] = useState('');
-  const [alertMessage, setAlertMessage] = useState('');
   const [bannerTitle, setBannerTitle] = useState('');
-  const [bannerSubtitle, setBannerSubtitle] = useState('');
-  const [bannerLink, setBannerLink] = useState('');
-  const [bannerBg, setBannerBg] = useState('');
+  const [bannerBody, setBannerBody] = useState('');
   const [loading, setLoading] = useState(true);
-  const [info, setInfo] = useState<string | null>(null);
-  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    async function loadData() {
+    async function init() {
       if (!user) {
-        setIsAdmin(false);
         setLoading(false);
         return;
       }
-
-      const { data: profiles } = await supabase
+      const { data: profiles, error: profileError } = await supabase
         .from('profiles')
         .select('id, role')
         .eq('tg_id', user.id)
         .limit(1);
+
+      if (profileError) {
+        console.error(profileError);
+        setLoading(false);
+        return;
+      }
 
       if (!profiles || profiles.length === 0 || profiles[0].role !== 'admin') {
         setIsAdmin(false);
@@ -49,71 +50,109 @@ export default function AdminPage() {
 
       setIsAdmin(true);
 
-      const { data: listingsData } = await supabase
+      const { data: listData } = await supabase
         .from('listings')
         .select('id, title, city, status')
-        .order('created_at', { ascending: false })
-        .limit(50);
+        .order('created_at', { ascending: false });
 
-      setListings((listingsData as any) || []);
+      setListings((listData as any) || []);
 
       const { data: banner } = await supabase
         .from('ad_banner')
-        .select('*')
-        .eq('id', 1)
+        .select('id, title, body')
+        .limit(1)
         .maybeSingle();
 
       if (banner) {
-        setBannerTitle(banner.title || '');
-        setBannerSubtitle(banner.subtitle || '');
-        setBannerLink(banner.link_url || '');
-        setBannerBg(banner.bg_color || '');
+        setBannerTitle(banner.title ?? '');
+        setBannerBody(banner.body ?? '');
       }
 
       setLoading(false);
     }
 
-    loadData();
+    init();
   }, [user]);
 
-  async function changeStatus(id: string, status: 'approved' | 'rejected') {
+  async function updateListingStatus(id: string, status: string) {
     const { error } = await supabase
       .from('listings')
       .update({ status })
       .eq('id', id);
 
-    if (!error) {
-      setListings((prev) =>
-        prev.map((l) => (l.id === id ? { ...l, status } : l))
-      );
+    if (error) {
+      console.error(error);
+      setMessage('Не удалось обновить статус объявления.');
+      hapticError();
+      return;
     }
-  }
+    setMessage('Статус обновлён.');
+    hapticSuccess();
 
-  async function createAlert() {
-    if (!alertTitle || !alertMessage) return;
-    const { error } = await supabase.from('alerts').insert({
-      title: alertTitle,
-      message: alertMessage,
-      is_active: true
-    });
-    if (!error) {
-      setInfo('Алерт создан.');
-      setAlertTitle('');
-      setAlertMessage('');
-    }
+    setListings((prev) =>
+      prev.map((l) => (l.id === id ? { ...l, status } : l))
+    );
   }
 
   async function saveBanner() {
-    const { error } = await supabase.from('ad_banner').upsert({
-      id: 1,
-      title: bannerTitle,
-      subtitle: bannerSubtitle,
-      link_url: bannerLink,
-      bg_color: bannerBg
-    });
-    if (!error) {
-      setInfo('Баннер сохранён.');
+    setMessage(null);
+    hapticImpact('medium');
+    const { data, error } = await supabase
+      .from('ad_banner')
+      .upsert(
+        {
+          id: 1,
+          title: bannerTitle,
+          body: bannerBody
+        },
+        { onConflict: 'id' }
+      )
+      .select()
+      .single();
+
+    if (error) {
+      console.error(error);
+      setMessage('Не удалось сохранить баннер.');
+      hapticError();
+      return;
     }
+
+    setMessage('Баннер сохранён.');
+    hapticSuccess();
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#f9f4f0]">
+        <Header />
+        <main className="mx-auto max-w-5xl px-4 pb-8 pt-4">
+          <p className="text-xs text-slate-500">Загрузка…</p>
+        </main>
+      </div>
+    );
+  }
+
+  if (!isAdmin) {
+    return (
+      <div className="min-h-screen bg-[#f9f4f0]">
+        <Header />
+        <main className="mx-auto max-w-5xl px-4 pb-8 pt-4">
+          <button
+            type="button"
+            onClick={() => {
+              hapticImpact('light');
+              router.back();
+            }}
+            className="mb-3 inline-flex items-center gap-1 rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-700 shadow-sm"
+          >
+            ← Назад
+          </button>
+          <p className="text-xs text-slate-500">
+            Вам недоступна админ-панель.
+          </p>
+        </main>
+      </div>
+    );
   }
 
   return (
@@ -123,137 +162,99 @@ export default function AdminPage() {
         <div className="mb-3 flex items-center justify-between">
           <button
             type="button"
-            onClick={() => router.back()}
+            onClick={() => {
+              hapticImpact('light');
+              router.back();
+            }}
             className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-700 shadow-sm"
           >
             ← Назад
           </button>
-          <h1 className="text-lg font-semibold text-slate-900">
-            Админ-панель
-          </h1>
+          <h1 className="text-lg font-semibold text-slate-900">Админ-панель</h1>
           <div className="w-16" />
         </div>
 
-        {loading && <p className="text-xs text-slate-500">Загрузка…</p>}
-        {!loading && isAdmin === false && (
-          <p className="text-xs text-slate-500">
-            Доступ только для администраторов.
-          </p>
+        {message && (
+          <p className="mb-2 text-xs text-slate-700">{message}</p>
         )}
-        {!loading && isAdmin && (
-          <>
-            {info && (
-              <p className="mb-3 text-xs text-slate-700">
-                {info}
-              </p>
+
+        <section className="mb-4 rounded-3xl bg-white p-4 shadow-sm">
+          <h2 className="text-sm font-semibold text-slate-900">
+            Объявления на модерации
+          </h2>
+          <div className="mt-2 space-y-2 text-xs">
+            {listings.length === 0 && (
+              <p className="text-slate-500">Нет объявлений.</p>
             )}
-
-            <section className="mb-4 rounded-3xl bg-white p-4 shadow-sm">
-              <h2 className="text-sm font-semibold text-slate-900">
-                Модерация объявлений
-              </h2>
-              <div className="mt-3 space-y-2 text-xs">
-                {listings.length === 0 && (
-                  <p className="text-slate-500">Нет объявлений.</p>
-                )}
-                {listings.map((l) => (
-                  <div
-                    key={l.id}
-                    className="flex items-center justify-between rounded-2xl border border-slate-100 px-3 py-2"
+            {listings.map((l) => (
+              <div
+                key={l.id}
+                className="flex items-center justify-between rounded-2xl border border-slate-100 bg-slate-50 px-3 py-2"
+              >
+                <div className="flex flex-col">
+                  <span className="font-medium text-slate-900">{l.title}</span>
+                  <span className="text-[11px] text-slate-500">
+                    {l.city || 'Город не указан'} • Статус: {l.status}
+                  </span>
+                </div>
+                <div className="flex gap-2 text-[11px]">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      hapticImpact('light');
+                      updateListingStatus(l.id, 'approved');
+                    }}
+                    className="rounded-full bg-emerald-500 px-3 py-1 font-medium text-white"
                   >
-                    <div>
-                      <div className="font-medium text-slate-900">
-                        {l.title}
-                      </div>
-                      <div className="text-[11px] text-slate-500">
-                        {l.city || 'Город не указан'} • статус: {l.status}
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => changeStatus(l.id, 'approved')}
-                        className="rounded-full bg-emerald-500 px-3 py-1 text-[11px] font-medium text-white"
-                      >
-                        Одобрить
-                      </button>
-                      <button
-                        onClick={() => changeStatus(l.id, 'rejected')}
-                        className="rounded-full bg-rose-500 px-3 py-1 text-[11px] font-medium text-white"
-                      >
-                        Отклонить
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                    Одобрить
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      hapticImpact('light');
+                      updateListingStatus(l.id, 'rejected');
+                    }}
+                    className="rounded-full bg-rose-500 px-3 py-1 font-medium text-white"
+                  >
+                    Отклонить
+                  </button>
+                </div>
               </div>
-            </section>
+            ))}
+          </div>
+        </section>
 
-            <section className="mb-4 rounded-3xl bg-white p-4 shadow-sm">
-              <h2 className="text-sm font-semibold text-slate-900">
-                Глобальные алерты
-              </h2>
-              <div className="mt-3 space-y-2 text-xs">
-                <input
-                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-[#ff7a59]"
-                  placeholder="Заголовок"
-                  value={alertTitle}
-                  onChange={(e) => setAlertTitle(e.target.value)}
-                />
-                <textarea
-                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-[#ff7a59]"
-                  placeholder="Текст сообщения"
-                  rows={2}
-                  value={alertMessage}
-                  onChange={(e) => setAlertMessage(e.target.value)}
-                />
-                <button
-                  onClick={createAlert}
-                  className="inline-flex items-center rounded-full bg-slate-900 px-4 py-2 text-xs font-medium text-white"
-                >
-                  Создать алерт
-                </button>
-              </div>
-            </section>
-
-            <section className="rounded-3xl bg-white p-4 shadow-sm">
-              <h2 className="text-sm font-semibold text-slate-900">
-                Рекламный баннер
-              </h2>
-              <div className="mt-3 space-y-2 text-xs">
-                <input
-                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-[#ff7a59]"
-                  placeholder="Заголовок"
-                  value={bannerTitle}
-                  onChange={(e) => setBannerTitle(e.target.value)}
-                />
-                <input
-                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-[#ff7a59]"
-                  placeholder="Подзаголовок"
-                  value={bannerSubtitle}
-                  onChange={(e) => setBannerSubtitle(e.target.value)}
-                />
-                <input
-                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-[#ff7a59]"
-                  placeholder="Ссылка"
-                  value={bannerLink}
-                  onChange={(e) => setBannerLink(e.target.value)}
-                />
-                <input
-                  className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-[#ff7a59]"
-                  placeholder="Цвет фона (например #f5e9ff)"
-                  value={bannerBg}
-                  onChange={(e) => setBannerBg(e.target.value)}
-                />
-                <button
-                  onClick={saveBanner}
-                  className="inline-flex items-center rounded-full bg-slate-900 px-4 py-2 text-xs font-medium text-white"
-                >
-                  Сохранить баннер
-                </button>
-              </div>
-            </section>
-          </>
-        )}
+        <section className="rounded-3xl bg-white p-4 shadow-sm">
+          <h2 className="text-sm font-semibold text-slate-900">
+            Рекламный баннер на главной
+          </h2>
+          <div className="mt-2 space-y-2 text-xs">
+            <div>
+              <label className="text-xs font-medium text-slate-700">Заголовок</label>
+              <input
+                className="mt-1 w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs outline-none focus:border-[#ff7a59]"
+                value={bannerTitle}
+                onChange={(e) => setBannerTitle(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-slate-700">Текст</label>
+              <textarea
+                className="mt-1 w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs outline-none focus:border-[#ff7a59]"
+                rows={3}
+                value={bannerBody}
+                onChange={(e) => setBannerBody(e.target.value)}
+              />
+            </div>
+            <button
+              type="button"
+              onClick={saveBanner}
+              className="mt-1 inline-flex items-center rounded-full bg-slate-900 px-4 py-2 text-xs font-medium text-white"
+            >
+              Сохранить баннер
+            </button>
+          </div>
+        </section>
       </main>
     </div>
   );

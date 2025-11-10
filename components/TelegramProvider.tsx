@@ -30,7 +30,6 @@ export function TelegramProvider({ children }: { children: ReactNode }) {
         .then();
     }
 
-    // лёгкий прелоадер ~0.9с
     const timeout = setTimeout(() => {
       setReady(true);
     }, 900);
