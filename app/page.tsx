@@ -29,7 +29,8 @@ export default async function HomePage() {
     : {};
 
   return (
-    <div className="min-h-screen bg-[#f9f4f0]">
+    <div className="min-h-screen bg-[url('/fon.png')] bg-cover bg-center">
+      <div className="min-h-screen bg-[#f9f4f0]/85">
       <Header />
       <main className="mx-auto max-w-5xl px-4 pb-8 pt-4">
         <AlertBar alerts={alerts || []} />
@@ -116,6 +117,7 @@ export default async function HomePage() {
           </ul>
         </section>
       </main>
+      </div>
     </div>
   );
 }
