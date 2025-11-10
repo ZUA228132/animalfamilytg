@@ -176,6 +176,24 @@ export default function ProfilePage() {
               />
             </div>
 
+            <div className="rounded-2xl bg-slate-50 px-3 py-3 text-[11px] text-slate-600">
+              <div className="mb-1 font-semibold text-slate-900">
+                Верификация питомцев
+              </div>
+              <p className="mb-1">
+                Чтобы получить галочку верификации для питомца, свяжитесь с админом и
+                отправьте подтверждающие документы.
+              </p>
+              <a
+                href="https://t.me/aries_nik"
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center rounded-full bg-slate-900 px-3 py-1 text-[11px] font-medium text-white"
+              >
+                Написать админу @aries_nik
+              </a>
+            </div>
+
             {message && (
               <p className="text-xs text-slate-700">{message}</p>
             )}

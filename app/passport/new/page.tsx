@@ -38,13 +38,26 @@ const ALLERGY_OPTIONS = [
   'Другое'
 ];
 
+function getAgeYearsFromBirthDate(birthDate: string | null): number | null {
+  if (!birthDate) return null;
+  const d = new Date(birthDate);
+  if (Number.isNaN(d.getTime())) return null;
+  const now = new Date();
+  let years = now.getFullYear() - d.getFullYear();
+  const mDiff = now.getMonth() - d.getMonth();
+  if (mDiff < 0 || (mDiff === 0 && now.getDate() < d.getDate())) {
+    years -= 1;
+  }
+  return years < 0 ? null : years;
+}
+
 export default function NewPassportPage() {
   const router = useRouter();
   const user = useTelegramUser();
   const [name, setName] = useState('');
   const [species, setSpecies] = useState('');
   const [breed, setBreed] = useState('');
-  const [age, setAge] = useState('');
+  const [birthDate, setBirthDate] = useState('');
   const [vaccinations, setVaccinations] = useState('');
   const [allergies, setAllergies] = useState('');
   const [phone, setPhone] = useState('+7');
@@ -107,12 +120,15 @@ export default function NewPassportPage() {
       }
     }
 
+    const ageYears = getAgeYearsFromBirthDate(birthDate);
+
     const { error } = await supabase.from('pet_passports').insert({
       owner_id: profile.id,
       name,
       species,
       breed,
-      age_years: age ? Number(age) : null,
+      birth_date: birthDate || null,
+      age_years: ageYears,
       vaccinations,
       allergies,
       pet_photo_url: petPhotoUrl
@@ -208,14 +224,18 @@ export default function NewPassportPage() {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-xs font-medium text-slate-700">Возраст (лет)</label>
+              <label className="text-xs font-medium text-slate-700">
+                Дата рождения
+              </label>
               <input
-                type="number"
+                type="date"
                 className="mt-1 w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-[#ff7a59]"
-                value={age}
-                onChange={(e) => setAge(e.target.value)}
-                min="0"
+                value={birthDate}
+                onChange={(e) => setBirthDate(e.target.value)}
               />
+              <p className="mt-1 text-[10px] text-slate-500">
+                Возраст будет рассчитан автоматически на карточке паспорта.
+              </p>
             </div>
             <div>
               <label className="text-xs font-medium text-slate-700">Телефон владельца</label>

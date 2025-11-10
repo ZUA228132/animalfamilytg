@@ -14,6 +14,12 @@ type Listing = {
   status: string;
 };
 
+type PetPassportRow = {
+  id: string;
+  name: string;
+  is_verified: boolean | null;
+};
+
 type ProfileRow = {
   id: string;
   role: string | null;
@@ -25,6 +31,7 @@ export default function AdminPage() {
   const user = useTelegramUser();
   const router = useRouter();
   const [listings, setListings] = useState<Listing[]>([]);
+  const [petPassports, setPetPassports] = useState<PetPassportRow[]>([]);
   const [bannerTitle, setBannerTitle] = useState('');
   const [bannerBody, setBannerBody] = useState('');
   const [loading, setLoading] = useState(true);
@@ -86,6 +93,13 @@ export default function AdminPage() {
 
       setListings((listData as any) || []);
 
+      const { data: passportsData } = await supabase
+        .from('pet_passports')
+        .select('id, name, is_verified')
+        .order('created_at', { ascending: false });
+
+      setPetPassports((passportsData as any) || []);
+
       const { data: banner } = await supabase
         .from('ad_banner')
         .select('id, title, body')
@@ -115,11 +129,32 @@ export default function AdminPage() {
       hapticError();
       return;
     }
-    setMessage('Статус обновлён.');
+    setMessage('Статус объявления обновлён.');
     hapticSuccess();
 
     setListings((prev) =>
       prev.map((l) => (l.id === id ? { ...l, status } : l))
+    );
+  }
+
+  async function togglePassportVerification(id: string, current: boolean | null) {
+    const next = !current;
+    const { error } = await supabase
+      .from('pet_passports')
+      .update({ is_verified: next })
+      .eq('id', id);
+
+    if (error) {
+      console.error(error);
+      setMessage('Не удалось изменить верификацию питомца.');
+      hapticError();
+      return;
+    }
+    setMessage(next ? 'Галочка верификации выдана.' : 'Галочка верификации снята.');
+    hapticSuccess();
+
+    setPetPassports((prev) =>
+      prev.map((p) => (p.id === id ? { ...p, is_verified: next } : p))
     );
   }
 
@@ -257,6 +292,48 @@ export default function AdminPage() {
                     Отклонить
                   </button>
                 </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="mb-4 rounded-3xl bg-white p-4 shadow-sm">
+          <h2 className="text-sm font-semibold text-slate-900">
+            Верификация питомцев
+          </h2>
+          <p className="mt-1 text-[11px] text-slate-500">
+            Админ вручную подтверждает реальность питомцев. Пользователи присылают документы
+            админу в Telegram, после чего здесь выдаётся галочка.
+          </p>
+          <div className="mt-2 space-y-2 text-xs">
+            {petPassports.length === 0 && (
+              <p className="text-slate-500">Паспортов пока нет.</p>
+            )}
+            {petPassports.map((p) => (
+              <div
+                key={p.id}
+                className="flex items-center justify-between rounded-2xl border border-slate-100 bg-slate-50 px-3 py-2"
+              >
+                <div className="flex flex-col">
+                  <span className="font-medium text-slate-900">{p.name}</span>
+                  <span className="text-[11px] text-slate-500">
+                    Статус: {p.is_verified ? 'верифицирован' : 'без галочки'}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    hapticImpact('light');
+                    togglePassportVerification(p.id, p.is_verified ?? false);
+                  }}
+                  className={`rounded-full px-3 py-1 text-[11px] font-medium ${
+                    p.is_verified
+                      ? 'bg-slate-300 text-slate-800'
+                      : 'bg-emerald-500 text-white'
+                  }`}
+                >
+                  {p.is_verified ? 'Снять галочку' : 'Выдать галочку'}
+                </button>
               </div>
             ))}
           </div>

@@ -1,30 +1,71 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { Header } from '@/components/Header';
 import { hapticImpact, hapticSuccess, hapticError } from '@/lib/telegram';
+import { useTelegramUser } from '@/components/TelegramProvider';
 
 type Passport = {
   id: string;
+  owner_id: string;
   name: string;
   species: string | null;
   breed: string | null;
+  birth_date: string | null;
   age_years: number | null;
   vaccinations: string | null;
   allergies: string | null;
   pet_photo_url: string | null;
+  is_verified: boolean | null;
+};
+
+type OwnerProfile = {
+  id: string;
+  tg_id: number;
+  tg_username: string | null;
+  full_name: string | null;
 };
 
 type ViewMode = 'view' | 'edit';
+
+function computeAgeLabel(birthDate: string | null, ageYearsFallback: number | null): string {
+  if (birthDate) {
+    const d = new Date(birthDate);
+    if (!Number.isNaN(d.getTime())) {
+      const now = new Date();
+      let years = now.getFullYear() - d.getFullYear();
+      const mDiff = now.getMonth() - d.getMonth();
+      if (mDiff < 0 || (mDiff === 0 && now.getDate() < d.getDate())) {
+        years -= 1;
+      }
+      if (years < 0) years = 0;
+      if (years === 0) {
+        // считаем в месяцах
+        let months = (now.getFullYear() - d.getFullYear()) * 12 + (now.getMonth() - d.getMonth());
+        if (now.getDate() < d.getDate()) months -= 1;
+        if (months < 0) months = 0;
+        if (months <= 1) return 'Меньше месяца';
+        if (months < 12) return `${months} мес.`;
+      }
+      return `${years} лет`;
+    }
+  }
+  if (ageYearsFallback != null) {
+    return `${ageYearsFallback} лет`;
+  }
+  return 'Возраст не указан';
+}
 
 export default function PassportDetailPage() {
   const params = useParams();
   const id = params?.id as string;
   const router = useRouter();
+  const tgUser = useTelegramUser();
 
   const [passport, setPassport] = useState<Passport | null>(null);
+  const [owner, setOwner] = useState<OwnerProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [mode, setMode] = useState<ViewMode>('view');
   const [saving, setSaving] = useState(false);
@@ -33,9 +74,14 @@ export default function PassportDetailPage() {
   const [name, setName] = useState('');
   const [species, setSpecies] = useState('');
   const [breed, setBreed] = useState('');
-  const [age, setAge] = useState('');
+  const [birthDate, setBirthDate] = useState('');
   const [vaccinations, setVaccinations] = useState('');
   const [allergies, setAllergies] = useState('');
+
+  const canEdit = useMemo(() => {
+    if (!passport || !owner || !tgUser) return false;
+    return owner.tg_id === tgUser.id;
+  }, [passport, owner, tgUser]);
 
   useEffect(() => {
     async function load() {
@@ -54,9 +100,23 @@ export default function PassportDetailPage() {
         setName(p.name || '');
         setSpecies(p.species || '');
         setBreed(p.breed || '');
-        setAge(p.age_years != null ? String(p.age_years) : '');
+        setBirthDate(p.birth_date || '');
         setVaccinations(p.vaccinations || '');
         setAllergies(p.allergies || '');
+
+        if (p.owner_id) {
+          const { data: ownerRow, error: ownerError } = await supabase
+            .from('profiles')
+            .select('id, tg_id, tg_username, full_name')
+            .eq('id', p.owner_id)
+            .maybeSingle();
+
+          if (ownerError) {
+            console.error(ownerError);
+          } else if (ownerRow) {
+            setOwner(ownerRow as any);
+          }
+        }
       }
       setLoading(false);
     }
@@ -66,10 +126,25 @@ export default function PassportDetailPage() {
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
-    if (!passport) return;
+    if (!passport || !canEdit) return;
     setSaving(true);
     setMessage(null);
     hapticImpact('medium');
+
+    // пересчитаем возраст в годах для хранения
+    let ageYears: number | null = null;
+    if (birthDate) {
+      const d = new Date(birthDate);
+      if (!Number.isNaN(d.getTime())) {
+        const now = new Date();
+        ageYears = now.getFullYear() - d.getFullYear();
+        const mDiff = now.getMonth() - d.getMonth();
+        if (mDiff < 0 || (mDiff === 0 && now.getDate() < d.getDate())) {
+          ageYears -= 1;
+        }
+        if (ageYears < 0) ageYears = 0;
+      }
+    }
 
     const { error } = await supabase
       .from('pet_passports')
@@ -77,7 +152,8 @@ export default function PassportDetailPage() {
         name,
         species,
         breed,
-        age_years: age ? Number(age) : null,
+        birth_date: birthDate || null,
+        age_years: ageYears,
         vaccinations,
         allergies
       })
@@ -100,7 +176,8 @@ export default function PassportDetailPage() {
               name,
               species,
               breed,
-              age_years: age ? Number(age) : null,
+              birth_date: birthDate || null,
+              age_years: ageYears,
               vaccinations,
               allergies
             }
@@ -113,7 +190,9 @@ export default function PassportDetailPage() {
     if (!passport) return;
     hapticImpact('light');
     const url = window.location.href;
-    const text = `Паспорт питомца ${passport.name}`;
+    const ownerPart = owner?.tg_username ? `
+Владелец: @${owner.tg_username}` : '';
+    const text = `Паспорт питомца ${passport.name}${ownerPart}`;
 
     if (navigator.share) {
       try {
@@ -126,6 +205,8 @@ export default function PassportDetailPage() {
       setMessage('Ссылка на паспорт скопирована.');
     }
   }
+
+  const ageLabel = computeAgeLabel(passport?.birth_date || null, passport?.age_years ?? null);
 
   return (
     <div className="min-h-screen bg-[#f9f4f0]">
@@ -188,6 +269,11 @@ export default function PassportDetailPage() {
                       <span className="rounded-full bg-white/70 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-600">
                         DIGITAL PASS
                       </span>
+                      {passport.is_verified && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/90 px-2 py-0.5 text-[10px] font-semibold text-white">
+                          ✓ Верифицирован
+                        </span>
+                      )}
                     </div>
                     <div className="mt-2 flex flex-wrap gap-2 text-[11px]">
                       <span className="rounded-full bg-white/80 px-2 py-1 text-slate-700">
@@ -199,11 +285,28 @@ export default function PassportDetailPage() {
                         </span>
                       )}
                       <span className="rounded-full bg-white/70 px-2 py-1 text-slate-700">
-                        {passport.age_years != null
-                          ? `${passport.age_years} лет`
-                          : 'Возраст не указан'}
+                        {ageLabel}
                       </span>
                     </div>
+                    {owner && (
+                      <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-slate-700">
+                        <span className="text-slate-600">Владелец:</span>
+                        {owner.tg_username ? (
+                          <a
+                            href={`https://t.me/${owner.tg_username}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center rounded-full bg-white/80 px-2 py-0.5 font-medium text-slate-800"
+                          >
+                            @{owner.tg_username}
+                          </a>
+                        ) : (
+                          <span className="rounded-full bg-white/70 px-2 py-0.5">
+                            {owner.full_name || 'Профиль владельца'}
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div className="flex flex-1 flex-col gap-2 text-[11px] text-slate-700">
@@ -229,21 +332,23 @@ export default function PassportDetailPage() {
                 >
                   Поделиться паспортом
                 </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    hapticImpact('light');
-                    setMode(mode === 'view' ? 'edit' : 'view');
-                  }}
-                  className="inline-flex items-center rounded-full bg-white/90 px-3 py-1 font-medium text-slate-800"
-                >
-                  {mode === 'view' ? 'Редактировать данные' : 'Отменить редактирование'}
-                </button>
+                {canEdit && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      hapticImpact('light');
+                      setMode(mode === 'view' ? 'edit' : 'view');
+                    }}
+                    className="inline-flex items-center rounded-full bg-white/90 px-3 py-1 font-medium text-slate-800"
+                  >
+                    {mode === 'view' ? 'Редактировать данные' : 'Отменить редактирование'}
+                  </button>
+                )}
               </div>
             </section>
 
             {/* Блок с подробными данными / редактированием */}
-            {mode === 'edit' ? (
+            {canEdit && mode === 'edit' ? (
               <form
                 className="space-y-3 rounded-3xl bg-white p-4 shadow-sm"
                 onSubmit={handleSave}
@@ -282,14 +387,13 @@ export default function PassportDetailPage() {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="text-xs font-medium text-slate-700">
-                      Возраст (лет)
+                      Дата рождения
                     </label>
                     <input
-                      type="number"
+                      type="date"
                       className="mt-1 w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-[#ff7a59]"
-                      value={age}
-                      onChange={(e) => setAge(e.target.value)}
-                      min="0"
+                      value={birthDate}
+                      onChange={(e) => setBirthDate(e.target.value)}
                     />
                   </div>
                   <div>
@@ -350,12 +454,10 @@ export default function PassportDetailPage() {
                   </div>
                   <div>
                     <div className="text-[11px] font-medium text-slate-500">
-                      Возраст (лет)
+                      Возраст
                     </div>
                     <div className="mt-0.5 text-sm text-slate-900">
-                      {passport.age_years != null
-                        ? passport.age_years
-                        : 'Не указано'}
+                      {ageLabel}
                     </div>
                   </div>
                 </div>
@@ -377,6 +479,23 @@ export default function PassportDetailPage() {
                     </div>
                   </div>
                 </div>
+                {owner && (
+                  <div className="mt-1 text-[11px] text-slate-600">
+                    Владелец:{' '}
+                    {owner.tg_username ? (
+                      <a
+                        href={`https://t.me/${owner.tg_username}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="font-medium text-slate-900"
+                      >
+                        @{owner.tg_username}
+                      </a>
+                    ) : (
+                      owner.full_name || 'Профиль владельца'
+                    )}
+                  </div>
+                )}
                 {message && (
                   <p className="mt-1 text-xs text-slate-700">{message}</p>
                 )}

@@ -60,6 +60,11 @@ export default function ListingDetailPage() {
   const typeLabel =
     listing?.type && TYPE_LABELS[listing.type] ? TYPE_LABELS[listing.type] : 'Объявление';
 
+  const yandexHref =
+    listing && listing.lat != null && listing.lng != null
+      ? `https://yandex.ru/maps/?ll=${listing.lng}%2C${listing.lat}&z=16`
+      : null;
+
   return (
     <div className="min-h-screen bg-[#f9f4f0]">
       <Header />
@@ -141,10 +146,16 @@ export default function ListingDetailPage() {
                 <p>
                   Координаты: {listing.lat.toFixed(5)} / {listing.lng.toFixed(5)}
                 </p>
-                <p className="mt-1 text-[11px] text-slate-500">
-                  Точная карта в этом просмотре не отображается, но координаты можно
-                  открыть через любые карты.
-                </p>
+                {yandexHref && (
+                  <a
+                    href={yandexHref}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-1 inline-flex text-[11px] font-medium text-[#ff7a59]"
+                  >
+                    Открыть в Яндекс.Картах
+                  </a>
+                )}
               </section>
             )}
 
