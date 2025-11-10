@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { Header } from '@/components/Header';
 import { useRouter } from 'next/navigation';
 import { useTelegramUser } from '@/components/TelegramProvider';
-import { hapticImpact, hapticSuccess, hapticError } from '@/lib/telegram';
+import { hapticImpact, hapticSuccess, hapticError, hapticWarning } from '@/lib/telegram';
 
 const MapView = dynamic(
   () => import('@/components/MapView').then((m) => m.MapView),
