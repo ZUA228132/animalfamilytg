@@ -304,13 +304,6 @@ export default function AdminPage() {
     hapticSuccess();
   }
 
-      hapticError();
-      return;
-    }
-
-    setMessage('Баннер сохранён.');
-    hapticSuccess();
-  }
 
   if (loading) {
     return (
