@@ -19,6 +19,11 @@ type Profile = {
   badge: string | null;
   role: string | null;
   is_premium: boolean | null;
+  is_business: boolean | null;
+  business_name: string | null;
+  business_description: string | null;
+  business_services: string | null;
+  business_contacts: string | null;
 };
 
 export default function ProfilePage() {
@@ -29,6 +34,7 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [premiumMessage, setPremiumMessage] = useState<string | null>(null);
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
 
   const [premiumTapCount, setPremiumTapCount] = useState(0);
 
@@ -79,6 +85,12 @@ export default function ProfilePage() {
     load();
   }, [user]);
 
+  useEffect(() => {
+    if (profile && typeof window !== 'undefined') {
+      setShareUrl(`${window.location.origin}/u/${profile.id}`);
+    }
+  }, [profile]);
+
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     if (!profile) return;
@@ -91,7 +103,11 @@ export default function ProfilePage() {
       .update({
         phone: profile.phone,
         city: profile.city,
-        about: profile.about
+        about: profile.about,
+        business_name: profile.business_name,
+        business_description: profile.business_description,
+        business_services: profile.business_services,
+        business_contacts: profile.business_contacts
       })
       .eq('id', profile.id);
 
@@ -243,6 +259,82 @@ export default function ProfilePage() {
               />
             </div>
 
+            {profile?.is_business && (
+              <div className="mt-2 rounded-3xl bg-slate-50 p-3">
+                <h2 className="text-xs font-semibold text-slate-900">
+                  Настройки бизнес-профиля
+                </h2>
+                <p className="mt-1 text-[11px] text-slate-500">
+                  Эти данные будут отображаться на отдельной странице вашего бизнеса и в объявлениях.
+                </p>
+                <div className="mt-2 space-y-2">
+                  <div>
+                    <label className="text-xs font-medium text-slate-700">
+                      Название бизнеса
+                    </label>
+                    <input
+                      className="mt-1 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs outline-none focus:border-[#ff7a59]"
+                      value={profile?.business_name || ''}
+                      onChange={(e) =>
+                        setProfile((p) =>
+                          p ? { ...p, business_name: e.target.value } : p
+                        )
+                      }
+                      placeholder="Например, «Счастливый хвост», груминг-салон"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-slate-700">
+                      Описание
+                    </label>
+                    <textarea
+                      className="mt-1 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs outline-none focus:border-[#ff7a59]"
+                      rows={3}
+                      value={profile?.business_description || ''}
+                      onChange={(e) =>
+                        setProfile((p) =>
+                          p ? { ...p, business_description: e.target.value } : p
+                        )
+                      }
+                      placeholder="Кратко расскажите о бизнесе, специализации и преимуществах."
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-slate-700">
+                      Услуги и цены
+                    </label>
+                    <textarea
+                      className="mt-1 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs outline-none focus:border-[#ff7a59]"
+                      rows={3}
+                      value={profile?.business_services || ''}
+                      onChange={(e) =>
+                        setProfile((p) =>
+                          p ? { ...p, business_services: e.target.value } : p
+                        )
+                      }
+                      placeholder="Перечислите основные услуги и примерные цены."
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-slate-700">
+                      Контакты бизнеса
+                    </label>
+                    <textarea
+                      className="mt-1 w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-xs outline-none focus:border-[#ff7a59]"
+                      rows={2}
+                      value={profile?.business_contacts || ''}
+                      onChange={(e) =>
+                        setProfile((p) =>
+                          p ? { ...p, business_contacts: e.target.value } : p
+                        )
+                      }
+                      placeholder="Телефон, адрес, сайт, график работы."
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Блок премиум-подписки */}
             <div onClick={handlePremiumTap} className="rounded-3xl bg-gradient-to-r from-[#e0ecff] via-[#ffd1e3] to-[#ffe2cf] p-4 text-xs text-slate-700">
               <div className="flex items-start gap-3">
@@ -307,6 +399,43 @@ export default function ProfilePage() {
                 Написать админу @aries_nik
               </a>
             </div>
+
+                        {shareUrl && (
+              <div className="mt-3 rounded-3xl bg-slate-50 p-3 text-xs">
+                <h2 className="text-xs font-semibold text-slate-900">
+                  Публичный профиль
+                </h2>
+                <p className="mt-1 text-[11px] text-slate-500">
+                  Этой ссылкой можно делиться — на ней отображается ваш открытый профиль и отзывы.
+                </p>
+                <div className="mt-2 flex items-center gap-2">
+                  <input
+                    className="flex-1 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-[11px] outline-none"
+                    value={shareUrl}
+                    readOnly
+                    onFocus={(e) => e.currentTarget.select()}
+                  />
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        if (navigator.clipboard && window.isSecureContext) {
+                          await navigator.clipboard.writeText(shareUrl);
+                        }
+                        hapticSuccess();
+                        setMessage('Ссылка на профиль скопирована.');
+                      } catch (e) {
+                        console.error(e);
+                        hapticError();
+                      }
+                    }}
+                    className="inline-flex items-center rounded-full bg-slate-900 px-3 py-2 text-[11px] font-medium text-white"
+                  >
+                    Копировать
+                  </button>
+                </div>
+              </div>
+            )}
 
             {message && (
               <p className="text-xs text-slate-700">{message}</p>

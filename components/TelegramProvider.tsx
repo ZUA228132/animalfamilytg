@@ -52,7 +52,7 @@ export function TelegramProvider({ children }: { children: ReactNode }) {
         console.error('Ошибка инициализации Telegram WebApp', e);
       } finally {
         // Небольшая задержка, чтобы прелоадер выглядел плавнее
-        setTimeout(() => setReady(true), 300);
+        setTimeout(() => setReady(true), 1200);
       }
     }
 

@@ -14,14 +14,19 @@ export default async function HomePage() {
 
   const { data: banner } = await supabase
     .from('ad_banner')
-    .select('title, body, link_url, image_url, bg_color, chat_url')
+    .select('title, body, link_url, image_url, bg_color')
     .limit(1)
     .maybeSingle();
 
-  
-  const petChatUrl = (banner as any)?.chat_url ?? null;
+  const { data: chatSettings } = await supabase
+    .from('pet_chat_settings')
+    .select('chat_url')
+    .limit(1)
+    .maybeSingle();
 
-const safeBanner = banner
+  const petChatUrl = (chatSettings as any)?.chat_url ?? null;
+
+  const safeBanner = banner
     ? {
         title: banner.title,
         subtitle: banner.body,
@@ -107,6 +112,12 @@ const safeBanner = banner
                 className="inline-flex items-center rounded-full bg-slate-900 px-4 py-2 text-xs font-medium text-white"
               >
                 Спросить Степана
+              </Link>
+              <Link
+                href="/business"
+                className="inline-flex items-center rounded-full bg-white/80 px-4 py-2 text-[11px] font-medium text-slate-900"
+              >
+                Animal Family для бизнеса
               </Link>
               <p className="max-w-xs text-[10px] text-slate-600 text-left sm:text-right">
                 Важно: ответы Степана носят рекомендательный характер и не заменяют очный приём
