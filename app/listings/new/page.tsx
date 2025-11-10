@@ -1,289 +1,311 @@
 'use client';
 
-import { useState, useEffect, ChangeEvent, FormEvent } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { Header } from '@/components/Header';
+import { useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import { useTelegramUser } from '@/components/TelegramProvider';
-import MapView from '@/components/MapView';
+import { hapticImpact, hapticSuccess, hapticError, hapticWarning } from '@/lib/telegram';
 
-type NewListingForm = {
-  title: string;
-  description: string;
-  city: string;
-  price: string;
-  type: string;
-  status: string;
-  contact_tg_username: string;
-  image_url: string;
-  latitude: string;
-  longitude: string;
+const MapView = dynamic(() => import('@/components/MapView').then(m => m.MapView), { ssr: false });
+
+type ProfileRow = {
+  id: string;
+  tg_id: number;
+  tg_username: string | null;
+  city: string | null;
+  is_premium: boolean | null;
 };
 
-const DEFAULT_FORM: NewListingForm = {
-  title: '',
-  description: '',
-  city: '',
-  price: '',
-  type: 'sell',
-  status: 'active',
-  contact_tg_username: '',
-  image_url: '',
-  latitude: '',
-  longitude: '',
-};
-
-export const dynamic = 'force-dynamic';
+const TYPE_OPTIONS = [
+  { value: 'lost', label: 'Потерялся' },
+  { value: 'found', label: 'Нашёлся' },
+  { value: 'adoption', label: 'Ищет дом' },
+  { value: 'service', label: 'Услуги (премиум)' },
+  { value: 'sale', label: 'Продажа (премиум)' }
+];
 
 export default function NewListingPage() {
   const router = useRouter();
-  const telegramUser = useTelegramUser();
+  const tgUser = useTelegramUser();
 
-  const [form, setForm] = useState<NewListingForm>(DEFAULT_FORM);
+  const [profile, setProfile] = useState<ProfileRow | null>(null);
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [city, setCity] = useState('');
+  const [type, setType] = useState('lost');
+  const [price, setPrice] = useState('');
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [lat, setLat] = useState<number | null>(null);
+  const [lng, setLng] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
 
-  // Подставляем @username из Telegram, если он есть
   useEffect(() => {
-    if (!telegramUser?.username) return;
-    setForm((prev) => ({
-      ...prev,
-      contact_tg_username: telegramUser.username.startsWith('@')
-        ? telegramUser.username
-        : `@${telegramUser.username}`,
-    }));
-  }, [telegramUser?.username]);
+    async function loadProfile() {
+      if (!tgUser) return;
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, tg_id, tg_username, city, is_premium')
+        .eq('tg_id', tgUser.id)
+        .maybeSingle();
 
-  const handleChange = (
-    e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,
-  ) => {
-    const { name, value } = e.target;
-    setForm((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
+      if (error) {
+        console.error(error);
+        setMessage('Ошибка загрузки профиля.');
+        return;
+      }
+      if (data) {
+        const p = data as ProfileRow;
+        setProfile(p);
+        if (p.city) setCity(p.city);
+      }
+    }
+    loadProfile();
+  }, [tgUser]);
 
-  const canSubmit =
-    form.title.trim().length > 2 &&
-    form.type.trim().length > 0 &&
-    !isSubmitting;
-
-  const parseNumberOrNull = (value: string): number | null => {
-    const v = value.replace(',', '.').trim();
-    if (!v) return null;
-    const n = Number(v);
-    return Number.isNaN(n) ? null : n;
-  };
-
-  const handleSubmit = async (e: FormEvent) => {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!canSubmit) return;
+    setMessage(null);
+    hapticImpact('medium');
+
+    if (!tgUser) {
+      setMessage('Откройте приложение из Telegram.');
+      hapticError();
+      return;
+    }
+
+    if (!profile) {
+      setMessage('Профиль пользователя не найден.');
+      hapticError();
+      return;
+    }
+
+    if (!title || !city) {
+      setMessage('Заполните название и город.');
+      hapticWarning();
+      return;
+    }
+
+    if ((type === 'sale' || type === 'service') && !profile.is_premium) {
+      setMessage('Размещать объявления о продаже и услугах могут только пользователи с премиум-подпиской. Оформите премиум в профиле.');
+      hapticWarning();
+      return;
+    }
 
     setIsSubmitting(true);
 
-    const priceNumber = parseNumberOrNull(form.price);
-    const latitudeNumber = parseNumberOrNull(form.latitude);
-    const longitudeNumber = parseNumberOrNull(form.longitude);
+    let imageUrl: string | null = null;
+    if (imageFile) {
+      try {
+        const path = `listing-${profile.id}-${Date.now()}-${imageFile.name}`;
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('listings')
+          .upload(path, imageFile);
 
-    try {
-      const { error } = await supabase.from('listings').insert({
-        title: form.title.trim(),
-        description: form.description.trim() || null,
-        city: form.city.trim() || null,
-        price: priceNumber,
-        type: form.type || null,
-        status: form.status || 'active',
-        contact_tg_username: form.contact_tg_username.trim() || null,
-        image_url: form.image_url.trim() || null,
-        latitude: latitudeNumber,
-        longitude: longitudeNumber,
-      });
+        if (uploadError) {
+          console.error('Upload error', uploadError);
+          setIsSubmitting(false);
+          setMessage('Не удалось загрузить фото. Попробуйте ещё раз или выберите другое изображение.');
+          hapticError();
+          return;
+        }
 
-      if (error) {
-        console.error('Error inserting listing:', error);
-        alert('Не удалось создать объявление. Попробуйте ещё раз.');
+        const { data: publicData } = supabase.storage
+          .from('listings')
+          .getPublicUrl(path);
+
+        if (!publicData || !publicData.publicUrl) {
+          console.error('No public URL for uploaded image', publicData);
+          setIsSubmitting(false);
+          setMessage('Не удалось получить ссылку на фото. Попробуйте ещё раз.');
+          hapticError();
+          return;
+        }
+
+        imageUrl = publicData.publicUrl;
+      } catch (err) {
+        console.error('Unexpected upload error', err);
         setIsSubmitting(false);
+        setMessage('Произошла ошибка при загрузке фото.');
+        hapticError();
         return;
       }
-
-      router.push('/feed');
-    } catch (err) {
-      console.error('Unexpected error inserting listing:', err);
-      alert('Произошла ошибка. Попробуйте ещё раз.');
-      setIsSubmitting(false);
     }
-  };
 
-  const latitudeNumber = parseNumberOrNull(form.latitude);
-  const longitudeNumber = parseNumberOrNull(form.longitude);
+    const { error } = await supabase
+      .from('listings')
+      .insert({
+        owner_id: profile.id,
+        title,
+        description,
+        city,
+        type,
+        price: price ? Number(price) : null,
+        lat,
+        lng,
+        status: 'pending',
+        contact_tg_username: profile.tg_username ?? tgUser.username ?? null,
+        image_url: imageUrl,
+        owner_is_premium: !!profile.is_premium
+      });
+
+    setIsSubmitting(false);
+
+    if (error) {
+      console.error(error);
+      setMessage('Ошибка при создании объявления.');
+      hapticError();
+    } else {
+      setMessage('Объявление отправлено на модерацию.');
+      hapticSuccess();
+      setTimeout(() => {
+        router.push('/feed');
+      }, 1200);
+    }
+  }
+
+  function handleLocationChange(latVal: number, lngVal: number) {
+    setLat(latVal);
+    setLng(lngVal);
+  }
 
   return (
-    <main className="min-h-screen bg-slate-50 pb-6">
-      <div className="mx-auto flex max-w-md flex-col gap-4 px-4 pt-4">
-        <Header title="Новое объявление" />
+    <div className="min-h-screen bg-[#f9f4f0]">
+      <Header />
+      <main className="mx-auto max-w-5xl px-4 pb-8 pt-4">
+        <div className="mb-3 flex items-center justify-between">
+          <button
+            type="button"
+            onClick={() => {
+              hapticImpact('light');
+              router.back();
+            }}
+            className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-700 shadow-sm"
+          >
+            ← Назад
+          </button>
+          <h1 className="text-lg font-semibold text-slate-900">
+            Новое объявление
+          </h1>
+          <div className="w-16" />
+        </div>
 
         <form
+          className="space-y-3 rounded-3xl bg-white p-4 shadow-sm"
           onSubmit={handleSubmit}
-          className="space-y-4 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-100"
         >
           <div>
-            <label className="block text-xs font-medium text-slate-700">
-              Заголовок объявления
-            </label>
+            <label className="text-xs font-medium text-slate-700">Фото</label>
             <input
-              name="title"
-              value={form.title}
-              onChange={handleChange}
-              className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs outline-none ring-0 focus:border-sky-400"
-              placeholder="Например: Отдам котёнка в добрые руки"
-              maxLength={120}
+              type="file"
+              accept="image/*"
+              className="mt-1 w-full text-xs text-slate-600"
+              onChange={(e) => {
+                const file = e.target.files?.[0] ?? null;
+                setImageFile(file);
+                if (file) hapticImpact('light');
+              }}
             />
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-700">
+            <label className="text-xs font-medium text-slate-700">
+              Заголовок
+            </label>
+            <input
+              className="mt-1 w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-[#ff7a59]"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Например, «Нашёлся кот у метро...»"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="text-xs font-medium text-slate-700">Город</label>
+            <input
+              className="mt-1 w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-[#ff7a59]"
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
+              placeholder="Москва"
+              required
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-medium text-slate-700">
+                Категория
+              </label>
+              <select
+                className="mt-1 w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-[#ff7a59]"
+                value={type}
+                onChange={(e) => setType(e.target.value)}
+              >
+                {TYPE_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-1 text-[10px] text-slate-500">
+                Продажа и услуги доступны только с премиум-подпиской.
+              </p>
+            </div>
+            <div>
+              <label className="text-xs font-medium text-slate-700">
+                Цена (для продажи/услуг)
+              </label>
+              <input
+                type="number"
+                className="mt-1 w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-[#ff7a59]"
+                value={price}
+                onChange={(e) => setPrice(e.target.value)}
+                placeholder="0"
+                min="0"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="text-xs font-medium text-slate-700">
               Описание
             </label>
             <textarea
-              name="description"
-              value={form.description}
-              onChange={handleChange}
-              className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs outline-none ring-0 focus:border-sky-400"
-              rows={3}
-              placeholder="Расскажите подробнее о питомце или услуге"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-medium text-slate-700">
-                Город
-              </label>
-              <input
-                name="city"
-                value={form.city}
-                onChange={handleChange}
-                className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs outline-none ring-0 focus:border-sky-400"
-                placeholder="Например: Москва"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-slate-700">
-                Цена
-              </label>
-              <input
-                name="price"
-                value={form.price}
-                onChange={handleChange}
-                className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs outline-none ring-0 focus:border-sky-400"
-                placeholder="0 — если бесплатно"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-medium text-slate-700">
-                Тип объявления
-              </label>
-              <select
-                name="type"
-                value={form.type}
-                onChange={handleChange}
-                className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs outline-none ring-0 focus:border-sky-400"
-              >
-                <option value="sell">Продажа</option>
-                <option value="buy">Куплю</option>
-                <option value="service">Услуги</option>
-                <option value="lost">Потерялся</option>
-                <option value="found">Нашёлся</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-slate-700">
-                Статус
-              </label>
-              <select
-                name="status"
-                value={form.status}
-                onChange={handleChange}
-                className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs outline-none ring-0 focus:border-sky-400"
-              >
-                <option value="active">Активно</option>
-                <option value="reserved">Забронировано</option>
-                <option value="closed">Закрыто</option>
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-slate-700">
-              Контакт в Telegram
-            </label>
-            <input
-              name="contact_tg_username"
-              value={form.contact_tg_username}
-              onChange={handleChange}
-              className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs outline-none ring-0 focus:border-sky-400"
-              placeholder="@username"
+              className="mt-1 w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-[#ff7a59]"
+              rows={4}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Подробно опишите ситуацию, приметы питомца, контакты и удобное время связи."
             />
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-700">
-              Фото (URL)
+            <label className="text-xs font-medium text-slate-700">
+              Локация на карте (опционально)
             </label>
-            <input
-              name="image_url"
-              value={form.image_url}
-              onChange={handleChange}
-              className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs outline-none ring-0 focus:border-sky-400"
-              placeholder="https://…"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-medium text-slate-700">
-                Широта
-              </label>
-              <input
-                name="latitude"
-                value={form.latitude}
-                onChange={handleChange}
-                className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs outline-none ring-0 focus:border-sky-400"
-                placeholder="48.12345"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-slate-700">
-                Долгота
-              </label>
-              <input
-                name="longitude"
-                value={form.longitude}
-                onChange={handleChange}
-                className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs outline-none ring-0 focus:border-sky-400"
-                placeholder="37.54321"
-              />
+            <div className="mt-1">
+              <MapView onLocationChange={handleLocationChange} />
             </div>
           </div>
 
-          <MapView latitude={latitudeNumber} longitude={longitudeNumber} />
+          {message && (
+            <p className="text-xs text-slate-700">
+              {message}
+            </p>
+          )}
 
           <button
             type="submit"
-            disabled={!canSubmit}
-            className="mt-2 w-full rounded-full bg-emerald-500 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-600 disabled:cursor-not-allowed disabled:bg-slate-300"
+            disabled={isSubmitting}
+            className="mt-2 inline-flex w-full items-center justify-center rounded-full bg-slate-900 px-4 py-2 text-xs font-medium text-white disabled:opacity-60"
           >
-            {isSubmitting ? 'Создаём объявление…' : 'Создать объявление'}
+            {isSubmitting ? 'Сохраняем…' : 'Создать объявление'}
           </button>
         </form>
-
-        <div className="mt-2 text-center text-[11px] text-slate-400">
-          AnimalFamily • создание объявления
-        </div>
-      </div>
-    </main>
+      </main>
+    </div>
   );
 }
