@@ -82,22 +82,23 @@ export default function NewPassportPage() {
     let petPhotoUrl: string | null = null;
 
     if (photoFile) {
-      const path = `pet-${profile.id}-${Date.now()}-${photoFile.name}`;
-      const { error: uploadError } = await supabase.storage
-        .from('pets')
-        .upload(path, photoFile);
+      try {
+        const path = `pet-${profile.id}-${Date.now()}-${photoFile.name}`;
+        const { error: uploadError } = await supabase.storage
+          .from('pets')
+          .upload(path, photoFile);
 
-      if (uploadError) {
-        console.error(uploadError);
-        setIsSubmitting(false);
-        setMessage('Не удалось загрузить фото питомца.');
-        return;
+        if (uploadError) {
+          console.error('Upload error', uploadError);
+        } else {
+          const { data: publicData } = supabase.storage
+            .from('pets')
+            .getPublicUrl(path);
+          petPhotoUrl = publicData.publicUrl;
+        }
+      } catch (err) {
+        console.error('Unexpected upload error', err);
       }
-
-      const { data: publicData } = supabase.storage
-        .from('pets')
-        .getPublicUrl(path);
-      petPhotoUrl = publicData.publicUrl;
     }
 
     const { error } = await supabase.from('pet_passports').insert({
@@ -119,7 +120,7 @@ export default function NewPassportPage() {
     } else {
       setMessage('Паспорт создан.');
       setTimeout(() => {
-        router.push('/feed');
+        router.push('/passport');
       }, 1200);
     }
   }
