@@ -1,98 +1,151 @@
-import { supabase } from '@/lib/supabaseClient';
-import { Header } from '@/components/Header';
-import { AlertBar } from '@/components/AlertBar';
-import { AdBanner } from '@/components/AdBanner';
+// components/ListingCard.tsx
+'use client';
+
 import Link from 'next/link';
 
-export default async function HomePage() {
-  const { data: alerts } = await supabase
-    .from('alerts')
-    .select('id, title, message')
-    .eq('is_active', true)
-    .order('created_at', { ascending: false })
-    .limit(1);
+export type ListingCardListing = {
+  id: string;
+  title: string;
+  description?: string | null;
+  city?: string | null;
+  price?: number | null;
+  type?: string | null;
+  created_at?: string;
+  status?: string | null;
+  contact_tg_username?: string | null;
+  image_url?: string | null;
+  pet_passport?: { name?: string | null } | null;
+  owner?: { badge?: string | null } | null;
+};
 
-  const { data: banner } = await supabase
-    .from('ad_banner')
-    .select('title, body, link_url, image_url, bg_color')
-    .limit(1)
-    .maybeSingle();
+export type ListingCardProps = {
+  listing: ListingCardListing;
+};
 
-  const safeBanner = banner
-    ? {
-        title: banner.title,
-        subtitle: banner.body,
-        link_url: banner.link_url,
-        image_url: banner.image_url,
-        bg_color: banner.bg_color
-      }
-    : {};
+const TYPE_LABELS: Record<string, string> = {
+  sell: 'Продажа',
+  buy: 'Куплю',
+  service: 'Услуги',
+  lost: 'Потерялся',
+  found: 'Нашёлся',
+};
+
+function formatType(type?: string | null) {
+  if (!type) return 'Объявление';
+  return TYPE_LABELS[type] ?? type;
+}
+
+function formatPrice(price?: number | null) {
+  if (price == null) return 'Цена не указана';
+  if (price === 0) return 'Бесплатно';
+  return new Intl.NumberFormat('ru-RU', {
+    style: 'currency',
+    currency: 'RUB',
+    maximumFractionDigits: 0,
+  }).format(price);
+}
+
+function formatDate(dateString?: string) {
+  if (!dateString) return '';
+  const d = new Date(dateString);
+  if (Number.isNaN(d.getTime())) return '';
+  return d.toLocaleDateString('ru-RU', {
+    day: '2-digit',
+    month: 'short',
+  });
+}
+
+export function ListingCard({ listing }: ListingCardProps) {
+  const {
+    id,
+    title,
+    description,
+    city,
+    price,
+    type,
+    created_at,
+    status,
+    contact_tg_username,
+    image_url,
+    pet_passport,
+    owner,
+  } = listing;
+
+  const showVerified = Boolean(pet_passport || owner?.badge);
 
   return (
-    <div className="min-h-screen bg-[#f9f4f0]">
-      <Header />
-      <main className="mx-auto max-w-5xl px-4 pb-8 pt-4">
-        <AlertBar alerts={alerts || []} />
-
-        <section className="mt-4 rounded-3xl bg-white p-4 shadow-sm">
-          <h1 className="text-lg font-semibold text-slate-900">
-            Animal Family
-          </h1>
-          <p className="mt-2 text-sm text-slate-600">
-            Уютное пространство для владельцев животных внутри Telegram. Создавайте объявления,
-            цифровые паспорта питомцев и находите друг друга по городу.
-          </p>
-          <div className="mt-4 flex flex-wrap gap-3 text-xs md:text-[13px]">
-            <Link
-              href="/feed"
-              className="inline-flex items-center rounded-full bg-slate-900 px-4 py-2 font-medium text-white"
-            >
-              Открыть ленту объявлений
-            </Link>
-            <Link
-              href="/listings/new"
-              className="inline-flex items-center rounded-full bg-[#ffe2cf] px-4 py-2 font-medium text-slate-900"
-            >
-              Создать объявление
-            </Link>
-            <Link
-              href="/passport"
-              className="inline-flex items-center rounded-full bg-[#ffd1e3] px-4 py-2 font-medium text-slate-900"
-            >
-              Паспорт питомца
-            </Link>
-            <Link
-              href="/profile"
-              className="inline-flex items-center rounded-full bg-slate-100 px-4 py-2 font-medium text-slate-900"
-            >
-              Профиль
-            </Link>
+    <Link
+      href={`/listings/${id}`}
+      className="flex gap-3 rounded-2xl bg-white p-3 shadow-sm ring-1 ring-slate-100 transition hover:shadow-md hover:ring-slate-200"
+    >
+      <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-slate-100">
+        {image_url ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={image_url}
+            alt={title}
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center text-[11px] text-slate-400">
+            Фото нет
           </div>
-        </section>
+        )}
 
-        <section className="mt-4 rounded-3xl border border-dashed border-slate-300 bg-slate-50 p-4 text-center text-xs text-slate-600">
-          <div className="mb-1 text-sm font-semibold text-slate-900">
-            Рекламное место свободно
+        {showVerified && (
+          <div className="absolute left-1 top-1 inline-flex items-center gap-1 rounded-full bg-white/90 px-2 py-[2px] text-[10px] font-medium text-sky-700">
+            <span>✔</span>
+            <span>Документы</span>
           </div>
-          <p>
-            Здесь может быть ваша реклама или партнёрский проект. Настройка баннера доступна в админ-панели.
+        )}
+      </div>
+
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <div className="flex items-center gap-1 text-[11px] text-slate-500">
+              {city && <span className="truncate">{city}</span>}
+              {city && <span className="text-slate-300">•</span>}
+              <span className="truncate">{formatType(type)}</span>
+            </div>
+            <h3 className="mt-0.5 line-clamp-2 text-xs font-semibold text-slate-900">
+              {title}
+            </h3>
+          </div>
+          <div className="text-right">
+            <div className="text-xs font-semibold text-slate-900">
+              {formatPrice(price)}
+            </div>
+            {created_at && (
+              <div className="text-[11px] text-slate-400">
+                {formatDate(created_at)}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {description && (
+          <p className="line-clamp-2 text-[11px] text-slate-500">
+            {description}
           </p>
-        </section>
+        )}
 
-        <AdBanner {...safeBanner} />
-
-        <section className="mt-6 rounded-3xl bg-white p-4 shadow-sm">
-          <h2 className="text-sm font-semibold text-slate-900">Контакты</h2>
-          <ul className="mt-2 space-y-1 text-xs text-slate-600">
-            <li>
-              Официальный бот: <span className="font-medium">@AnimalFamilyBot</span>
-            </li>
-            <li>Админ: @aries_nik (Telegram)</li>
-            <li>Поддержка: support@animal.family (пример)</li>
-            <li>Сайт: animal.family</li>
-          </ul>
-        </section>
-      </main>
-    </div>
+        <div className="mt-1 flex flex-wrap items-center gap-2">
+          {status && (
+            <span className="inline-flex items-center rounded-full bg-slate-50 px-2 py-[2px] text-[10px] font-medium text-slate-500">
+              {status === 'active' ? 'Активно' : status}
+            </span>
+          )}
+          {contact_tg_username && (
+            <span className="inline-flex items-center rounded-full bg-[#e8f3ff] px-2 py-[2px] text-[10px] font-medium text-sky-700">
+              @{contact_tg_username.replace(/^@/, '')}
+            </span>
+          )}
+        </div>
+      </div>
+    </Link>
   );
 }
+
+// Есть и именованный, и default экспорт — чтобы всё работало везде
+export default ListingCard;
