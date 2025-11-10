@@ -6,7 +6,7 @@ import { Header } from '@/components/Header';
 import { useRouter } from 'next/navigation';
 import { useTelegramUser } from '@/components/TelegramProvider';
 import { hapticImpact, hapticSuccess, hapticError, hapticWarning } from '@/lib/telegram';
-import MapView from '@/components/MapView';
+import { MapView } from '@/components/MapView';
 
 type ProfileRow = {
   id: string;
