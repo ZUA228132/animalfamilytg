@@ -14,11 +14,14 @@ export default async function HomePage() {
 
   const { data: banner } = await supabase
     .from('ad_banner')
-    .select('title, body, link_url, image_url, bg_color')
+    .select('title, body, link_url, image_url, bg_color, chat_url')
     .limit(1)
     .maybeSingle();
 
-  const safeBanner = banner
+  
+  const petChatUrl = (banner as any)?.chat_url ?? null;
+
+const safeBanner = banner
     ? {
         title: banner.title,
         subtitle: banner.body,
@@ -68,6 +71,16 @@ export default async function HomePage() {
             >
               Профиль
             </Link>
+            {petChatUrl && (
+              <a
+                href={petChatUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center rounded-full bg-[#e0ecff] px-4 py-2 font-medium text-slate-900"
+              >
+                Чат питомцев
+              </a>
+            )}
           </div>
         </section>
 

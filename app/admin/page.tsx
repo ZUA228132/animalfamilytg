@@ -36,6 +36,7 @@ export default function AdminPage() {
   const [petPassports, setPetPassports] = useState<PetPassportRow[]>([]);
   const [bannerTitle, setBannerTitle] = useState('');
   const [bannerBody, setBannerBody] = useState('');
+  const [bannerChatUrl, setBannerChatUrl] = useState('');
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -103,13 +104,14 @@ export default function AdminPage() {
 
       const { data: banner } = await supabase
         .from('ad_banner')
-        .select('id, title, body')
+        .select('id, title, body, chat_url')
         .limit(1)
         .maybeSingle();
 
       if (banner) {
         setBannerTitle(banner.title ?? '');
         setBannerBody(banner.body ?? '');
+        setBannerChatUrl((banner as any).chat_url ?? '');
       }
 
       setLoading(false);
@@ -168,7 +170,8 @@ export default function AdminPage() {
         {
           id: 1,
           title: bannerTitle,
-          body: bannerBody
+          body: bannerBody,
+          chat_url: bannerChatUrl
         },
         { onConflict: 'id' }
       );
@@ -340,11 +343,13 @@ export default function AdminPage() {
           </div>
         </section>
 
-        <section className="rounded-3xl bg-white p-4 shadow-sm">
+                <section className="rounded-3xl bg-white p-4 shadow-sm">
           <h2 className="text-sm font-semibold text-slate-900">
             Рекламный баннер на главной
           </h2>
-          <p className="mt-1 text-[11px] text-slate-500">Здесь редактируется баннер на главной странице Animal Family.</p>
+          <p className="mt-1 text-[11px] text-slate-500">
+            Здесь редактируется баннер на главной странице Animal Family и ссылка на общий чат владельцев.
+          </p>
           <div className="mt-2 space-y-2 text-xs">
             <div>
               <label className="text-xs font-medium text-slate-700">Заголовок</label>
@@ -362,6 +367,18 @@ export default function AdminPage() {
                 value={bannerBody}
                 onChange={(e) => setBannerBody(e.target.value)}
               />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-slate-700">Ссылка на чат питомцев</label>
+              <input
+                className="mt-1 w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs outline-none focus:border-[#ff7a59]"
+                placeholder="https://t.me/your_chat"
+                value={bannerChatUrl}
+                onChange={(e) => setBannerChatUrl(e.target.value)}
+              />
+              <p className="mt-1 text-[11px] text-slate-500">
+                Укажите ссылку на Telegram-чат владельцев. Кнопка «Чат питомцев» на главной будет использовать эту ссылку.
+              </p>
             </div>
             <button
               type="button"
