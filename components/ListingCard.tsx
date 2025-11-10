@@ -1,5 +1,6 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { hapticImpact } from '@/lib/telegram';
 
 const TYPE_LABELS: Record<string, string> = {
@@ -31,9 +32,18 @@ type Listing = {
 
 export function ListingCard({ listing }: { listing: Listing }) {
   const typeLabel = listing.type ? TYPE_LABELS[listing.type] ?? 'Объявление' : 'Объявление';
+  const router = useRouter();
+
+  function openDetail() {
+    hapticImpact('light');
+    router.push(`/listings/${listing.id}`);
+  }
 
   return (
-    <div className="flex gap-3 rounded-3xl bg-white p-3 shadow-sm">
+    <div
+      className="flex cursor-pointer gap-3 rounded-3xl bg-white p-3 shadow-sm transition active:scale-[0.98]"
+      onClick={openDetail}
+    >
       {listing.image_url ? (
         <img
           src={listing.image_url}
@@ -77,7 +87,10 @@ export function ListingCard({ listing }: { listing: Listing }) {
               href={`https://t.me/${listing.contact_tg_username}`}
               target="_blank"
               rel="noreferrer"
-              onClick={() => hapticImpact('light')}
+              onClick={(e) => {
+                e.stopPropagation(); // чтобы не срабатывало открытие карточки вторично
+                hapticImpact('light');
+              }}
               className="inline-flex items-center rounded-full bg-slate-900 px-3 py-1 font-medium text-white"
             >
               Написать в Telegram

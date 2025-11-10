@@ -14,6 +14,13 @@ type Listing = {
   status: string;
 };
 
+type ProfileRow = {
+  id: string;
+  role: string | null;
+  tg_id: number;
+  tg_username: string | null;
+};
+
 export default function AdminPage() {
   const user = useTelegramUser();
   const router = useRouter();
@@ -23,26 +30,48 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [debugInfo, setDebugInfo] = useState<string | null>(null);
 
   useEffect(() => {
     async function init() {
       if (!user) {
         setLoading(false);
+        setDebugInfo('Telegram user не найден. Откройте приложение из Telegram.');
         return;
       }
       const { data: profiles, error: profileError } = await supabase
         .from('profiles')
-        .select('id, role')
+        .select('id, role, tg_id, tg_username')
         .eq('tg_id', user.id)
         .limit(1);
 
       if (profileError) {
         console.error(profileError);
+        setDebugInfo('Ошибка чтения профиля: ' + profileError.message);
         setLoading(false);
         return;
       }
 
-      if (!profiles || profiles.length === 0 || profiles[0].role !== 'admin') {
+      if (!profiles || profiles.length === 0) {
+        setIsAdmin(false);
+        setDebugInfo(
+          `Профиль не найден в таблице profiles. tg_id из Telegram: ${user.id}. Создайте запись в profiles с таким tg_id и role = 'admin'.`
+        );
+        setLoading(false);
+        return;
+      }
+
+      const profile = profiles[0] as ProfileRow;
+      const role = (profile.role || '').toLowerCase().trim();
+      const isAdminRole = role === 'admin';
+
+      setDebugInfo(
+        `Найден профиль: id=${profile.id}, tg_id=${profile.tg_id}, username=${
+          profile.tg_username || 'нет'
+        }, role=${profile.role || 'null'}.`
+      );
+
+      if (!isAdminRole) {
         setIsAdmin(false);
         setLoading(false);
         return;
@@ -97,7 +126,7 @@ export default function AdminPage() {
   async function saveBanner() {
     setMessage(null);
     hapticImpact('medium');
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from('ad_banner')
       .upsert(
         {
@@ -106,9 +135,7 @@ export default function AdminPage() {
           body: bannerBody
         },
         { onConflict: 'id' }
-      )
-      .select()
-      .single();
+      );
 
     if (error) {
       console.error(error);
@@ -147,9 +174,14 @@ export default function AdminPage() {
           >
             ← Назад
           </button>
-          <p className="text-xs text-slate-500">
+          <p className="mb-2 text-xs text-slate-500">
             Вам недоступна админ-панель.
           </p>
+          {debugInfo && (
+            <p className="text-[11px] text-slate-500">
+              {debugInfo}
+            </p>
+          )}
         </main>
       </div>
     );
@@ -173,6 +205,12 @@ export default function AdminPage() {
           <h1 className="text-lg font-semibold text-slate-900">Админ-панель</h1>
           <div className="w-16" />
         </div>
+
+        {debugInfo && (
+          <p className="mb-2 text-[11px] text-slate-500">
+            {debugInfo}
+          </p>
+        )}
 
         {message && (
           <p className="mb-2 text-xs text-slate-700">{message}</p>
