@@ -2,13 +2,14 @@
 
 import { useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { TelegramProvider } from '@/components/TelegramProvider';
 import { Header } from '@/components/Header';
 import { MapView } from '@/components/MapView';
 import { useRouter } from 'next/navigation';
+import { useTelegramUser } from '@/components/TelegramProvider';
 
 export default function NewListingPage() {
   const router = useRouter();
+  const user = useTelegramUser();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [city, setCity] = useState('');
@@ -19,9 +20,9 @@ export default function NewListingPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
-  async function handleSubmit(tgUser: any | null, e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!tgUser) {
+    if (!user) {
       setMessage('Ошибка: Telegram-пользователь не определен.');
       return;
     }
@@ -33,11 +34,10 @@ export default function NewListingPage() {
     setIsSubmitting(true);
     setMessage(null);
 
-    // Получаем профиль по tg_id
     const { data: profiles, error: profileError } = await supabase
       .from('profiles')
       .select('id, tg_username')
-      .eq('tg_id', tgUser.id)
+      .eq('tg_id', user.id)
       .limit(1);
 
     if (profileError || !profiles || profiles.length === 0) {
@@ -58,7 +58,7 @@ export default function NewListingPage() {
       lat,
       lng,
       status: 'pending',
-      contact_tg_username: profile.tg_username ?? tgUser.username ?? null
+      contact_tg_username: profile.tg_username ?? user.username ?? null
     });
 
     setIsSubmitting(false);
@@ -75,98 +75,94 @@ export default function NewListingPage() {
   }
 
   return (
-    <TelegramProvider>
-      {(user) => (
-        <div className="min-h-screen bg-[#f9f4f0]">
-          <Header user={user} />
-          <main className="mx-auto max-w-5xl px-4 pb-8 pt-4">
-            <h1 className="mb-3 text-lg font-semibold text-slate-900">Новое объявление</h1>
-            <form
-              className="space-y-3 rounded-3xl bg-white p-4 shadow-sm"
-              onSubmit={(e) => handleSubmit(user, e)}
-            >
-              <div>
-                <label className="text-xs font-medium text-slate-700">Заголовок</label>
-                <input
-                  className="mt-1 w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-[#ff7a59]"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="Щенок ищет дом"
-                  required
-                />
-              </div>
-              <div>
-                <label className="text-xs font-medium text-slate-700">Описание</label>
-                <textarea
-                  className="mt-1 w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-[#ff7a59]"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  rows={4}
-                  placeholder="Коротко опишите питомца или ситуацию."
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs font-medium text-slate-700">Город</label>
-                  <input
-                    className="mt-1 w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-[#ff7a59]"
-                    value={city}
-                    onChange={(e) => setCity(e.target.value)}
-                    placeholder="Киев"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-slate-700">Тип</label>
-                  <select
-                    className="mt-1 w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-[#ff7a59]"
-                    value={type}
-                    onChange={(e) => setType(e.target.value)}
-                  >
-                    <option value="lost">Потерялся</option>
-                    <option value="found">Нашёлся</option>
-                    <option value="adoption">Ищет дом</option>
-                    <option value="service">Услуги</option>
-                    <option value="sale">Продажа</option>
-                  </select>
-                </div>
-              </div>
-              <div>
-                <label className="text-xs font-medium text-slate-700">Цена (опционально)</label>
-                <input
-                  type="number"
-                  className="mt-1 w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-[#ff7a59]"
-                  value={price}
-                  onChange={(e) => setPrice(e.target.value)}
-                  placeholder="0"
-                  min="0"
-                />
-              </div>
-
-              <MapView
-                onLocationChange={(latitude, longitude) => {
-                  setLat(latitude);
-                  setLng(longitude);
-                }}
+    <div className="min-h-screen bg-[#f9f4f0]">
+      <Header />
+      <main className="mx-auto max-w-5xl px-4 pb-8 pt-4">
+        <h1 className="mb-3 text-lg font-semibold text-slate-900">Новое объявление</h1>
+        <form
+          className="space-y-3 rounded-3xl bg-white p-4 shadow-sm"
+          onSubmit={handleSubmit}
+        >
+          <div>
+            <label className="text-xs font-medium text-slate-700">Заголовок</label>
+            <input
+              className="mt-1 w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-[#ff7a59]"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Щенок ищет дом"
+              required
+            />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-slate-700">Описание</label>
+            <textarea
+              className="mt-1 w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-[#ff7a59]"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={4}
+              placeholder="Коротко опишите питомца или ситуацию."
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-medium text-slate-700">Город</label>
+              <input
+                className="mt-1 w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-[#ff7a59]"
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                placeholder="Киев"
+                required
               />
-
-              {message && (
-                <p className="text-xs text-slate-700">
-                  {message}
-                </p>
-              )}
-
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="mt-2 inline-flex w-full items-center justify-center rounded-full bg-slate-900 px-4 py-2 text-xs font-medium text-white disabled:opacity-60"
+            </div>
+            <div>
+              <label className="text-xs font-medium text-slate-700">Тип</label>
+              <select
+                className="mt-1 w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-[#ff7a59]"
+                value={type}
+                onChange={(e) => setType(e.target.value)}
               >
-                {isSubmitting ? 'Сохраняем…' : 'Создать объявление'}
-              </button>
-            </form>
-          </main>
-        </div>
-      )}
-    </TelegramProvider>
+                <option value="lost">Потерялся</option>
+                <option value="found">Нашёлся</option>
+                <option value="adoption">Ищет дом</option>
+                <option value="service">Услуги</option>
+                <option value="sale">Продажа</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label className="text-xs font-medium text-slate-700">Цена (опционально)</label>
+            <input
+              type="number"
+              className="mt-1 w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none focus:border-[#ff7a59]"
+              value={price}
+              onChange={(e) => setPrice(e.target.value)}
+              placeholder="0"
+              min="0"
+            />
+          </div>
+
+          <MapView
+            onLocationChange={(latitude, longitude) => {
+              setLat(latitude);
+              setLng(longitude);
+            }}
+          />
+
+          {message && (
+            <p className="text-xs text-slate-700">
+              {message}
+            </p>
+          )}
+
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="mt-2 inline-flex w-full items-center justify-center rounded-full bg-slate-900 px-4 py-2 text-xs font-medium text-white disabled:opacity-60"
+          >
+            {isSubmitting ? 'Сохраняем…' : 'Создать объявление'}
+          </button>
+        </form>
+      </main>
+    </div>
   );
 }

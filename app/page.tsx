@@ -1,5 +1,4 @@
 import { supabase } from '@/lib/supabaseClient';
-import { TelegramProvider } from '@/components/TelegramProvider';
 import { Header } from '@/components/Header';
 import { AlertBar } from '@/components/AlertBar';
 import { AdBanner } from '@/components/AdBanner';
@@ -20,63 +19,59 @@ export default async function HomePage() {
     .maybeSingle();
 
   return (
-    <TelegramProvider>
-      {(user) => (
-        <div className="min-h-screen">
-          <Header user={user} />
-          {alerts && <AlertBar alerts={alerts as any} />}
-          <main className="mx-auto max-w-5xl px-4 pb-8 pt-4">
-            <section className="rounded-3xl bg-white p-4 shadow-sm">
-              <h1 className="text-lg font-semibold text-slate-900">
-                Добро пожаловать в <span className="text-[#ff7a59]">Animal Family</span>
-              </h1>
-              <p className="mt-2 text-sm text-slate-600">
-                Сообщество владельцев животных: объявления как на Авито, цифровые паспорта
-                питомцев и безопасная связь через Telegram.
-              </p>
-              <div className="mt-4 flex flex-wrap gap-3">
-                <Link
-                  href="/feed"
-                  className="inline-flex items-center rounded-full bg-slate-900 px-4 py-2 text-xs font-medium text-white"
-                >
-                  Открыть ленту объявлений
-                </Link>
-                <Link
-                  href="/listings/new"
-                  className="inline-flex items-center rounded-full bg-[#ffe2cf] px-4 py-2 text-xs font-medium text-[#c95b3d]"
-                >
-                  Создать объявление
-                </Link>
-                <Link
-                  href="/passport/new"
-                  className="inline-flex items-center rounded-full bg-slate-100 px-4 py-2 text-xs font-medium text-slate-800"
-                >
-                  Цифровой паспорт питомца
-                </Link>
-                <Link
-                  href="/admin"
-                  className="inline-flex items-center rounded-full bg-slate-200 px-4 py-2 text-xs font-medium text-slate-700"
-                >
-                  Админ-панель
-                </Link>
-              </div>
-            </section>
+    <div className="min-h-screen">
+      <Header />
+      {alerts && <AlertBar alerts={alerts as any} />}
+      <main className="mx-auto max-w-5xl px-4 pb-8 pt-4">
+        <section className="rounded-3xl bg-white p-4 shadow-sm">
+          <h1 className="text-lg font-semibold text-slate-900">
+            Добро пожаловать в <span className="text-[#ff7a59]">Animal Family</span>
+          </h1>
+          <p className="mt-2 text-sm text-slate-600">
+            Сообщество владельцев животных: объявления как на Авито, цифровые паспорта
+            питомцев и безопасная связь через Telegram.
+          </p>
+          <div className="mt-4 flex flex-wrap gap-3">
+            <Link
+              href="/feed"
+              className="inline-flex items-center rounded-full bg-slate-900 px-4 py-2 text-xs font-medium text-white"
+            >
+              Открыть ленту объявлений
+            </Link>
+            <Link
+              href="/listings/new"
+              className="inline-flex items-center rounded-full bg-[#ffe2cf] px-4 py-2 text-xs font-medium text-[#c95b3d]"
+            >
+              Создать объявление
+            </Link>
+            <Link
+              href="/passport/new"
+              className="inline-flex items-center rounded-full bg-slate-100 px-4 py-2 text-xs font-medium text-slate-800"
+            >
+              Цифровой паспорт питомца
+            </Link>
+            <Link
+              href="/admin"
+              className="inline-flex items-center rounded-full bg-slate-200 px-4 py-2 text-xs font-medium text-slate-700"
+            >
+              Админ-панель
+            </Link>
+          </div>
+        </section>
 
-            <AdBanner {...(banner ?? {})} />
+        <AdBanner {...(banner ?? {})} />
 
-            <section className="mt-6 rounded-3xl bg-white p-4 shadow-sm">
-              <h2 className="text-sm font-semibold text-slate-900">Контакты</h2>
-              <ul className="mt-2 space-y-1 text-xs text-slate-600">
-                <li>
-                  Официальный бот: <span className="font-medium">@AnimalFamilyBot</span>
-                </li>
-                <li>Поддержка: support@animal.family (пример)</li>
-                <li>Сайт: animal.family</li>
-              </ul>
-            </section>
-          </main>
-        </div>
-      )}
-    </TelegramProvider>
+        <section className="mt-6 rounded-3xl bg-white p-4 shadow-sm">
+          <h2 className="text-sm font-semibold text-slate-900">Контакты</h2>
+          <ul className="mt-2 space-y-1 text-xs text-slate-600">
+            <li>
+              Официальный бот: <span className="font-medium">@AnimalFamilyBot</span>
+            </li>
+            <li>Поддержка: support@animal.family (пример)</li>
+            <li>Сайт: animal.family</li>
+          </ul>
+        </section>
+      </main>
+    </div>
   );
 }

@@ -1,5 +1,4 @@
 import { supabase } from '@/lib/supabaseClient';
-import { TelegramProvider } from '@/components/TelegramProvider';
 import { Header } from '@/components/Header';
 import { ListingCard } from '@/components/ListingCard';
 import Link from 'next/link';
@@ -30,31 +29,27 @@ export default async function FeedPage() {
   const safeListings = listings ?? [];
 
   return (
-    <TelegramProvider>
-      {(user) => (
-        <div className="min-h-screen bg-[#f9f4f0]">
-          <Header user={user} />
-          <main className="mx-auto max-w-5xl px-4 pb-8 pt-4">
-            <div className="mb-4 flex items-center justify-between">
-              <h1 className="text-lg font-semibold text-slate-900">Лента объявлений</h1>
-              <Link
-                href="/listings/new"
-                className="inline-flex items-center rounded-full bg-slate-900 px-4 py-2 text-xs font-medium text-white"
-              >
-                + Новое объявление
-              </Link>
-            </div>
-            <div className="space-y-3">
-              {safeListings.length === 0 && (
-                <p className="text-xs text-slate-500">Пока нет одобренных объявлений.</p>
-              )}
-              {safeListings.map((l: any) => (
-                <ListingCard key={l.id} listing={l} />
-              ))}
-            </div>
-          </main>
+    <div className="min-h-screen bg-[#f9f4f0]">
+      <Header />
+      <main className="mx-auto max-w-5xl px-4 pb-8 pt-4">
+        <div className="mb-4 flex items-center justify-between">
+          <h1 className="text-lg font-semibold text-slate-900">Лента объявлений</h1>
+          <Link
+            href="/listings/new"
+            className="inline-flex items-center rounded-full bg-slate-900 px-4 py-2 text-xs font-medium text-white"
+          >
+            + Новое объявление
+          </Link>
         </div>
-      )}
-    </TelegramProvider>
+        <div className="space-y-3">
+          {safeListings.length === 0 && (
+            <p className="text-xs text-slate-500">Пока нет одобренных объявлений.</p>
+          )}
+          {safeListings.map((l: any) => (
+            <ListingCard key={l.id} listing={l} />
+          ))}
+        </div>
+      </main>
+    </div>
   );
 }

@@ -1,12 +1,10 @@
 'use client';
 
-import { TelegramUser } from '@/lib/telegram';
+import { useTelegramUser } from '@/components/TelegramProvider';
 
-type HeaderProps = {
-  user: TelegramUser | null;
-};
+export function Header() {
+  const user = useTelegramUser();
 
-export function Header({ user }: HeaderProps) {
   return (
     <header className="w-full border-b border-slate-200 bg-[#fdf9f5]/80 backdrop-blur">
       <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">

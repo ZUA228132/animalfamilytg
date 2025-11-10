@@ -1,14 +1,12 @@
 'use client';
 
-import { ReactNode, useEffect, useState } from 'react';
+import { ReactNode, useEffect, useState, createContext, useContext } from 'react';
 import { getTelegramUser, initTelegramWebApp, TelegramUser } from '@/lib/telegram';
 import { supabase } from '@/lib/supabaseClient';
 
-type Props = {
-  children: (user: TelegramUser | null) => ReactNode;
-};
+const TelegramUserContext = createContext<TelegramUser | null>(null);
 
-export function TelegramProvider({ children }: Props) {
+export function TelegramProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<TelegramUser | null>(null);
 
   useEffect(() => {
@@ -32,5 +30,13 @@ export function TelegramProvider({ children }: Props) {
     }
   }, []);
 
-  return <>{children(user)}</>;
+  return (
+    <TelegramUserContext.Provider value={user}>
+      {children}
+    </TelegramUserContext.Provider>
+  );
+}
+
+export function useTelegramUser() {
+  return useContext(TelegramUserContext);
 }
