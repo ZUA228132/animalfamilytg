@@ -1,11 +1,24 @@
 'use client';
 
 import { useState } from 'react';
+import dynamic from 'next/dynamic';
 import { supabase } from '@/lib/supabaseClient';
 import { Header } from '@/components/Header';
-import { MapView } from '@/components/MapView';
 import { useRouter } from 'next/navigation';
 import { useTelegramUser } from '@/components/TelegramProvider';
+
+// Динамический импорт карты, только на клиенте
+const MapView = dynamic(
+  () => import('@/components/MapView').then((m) => m.MapView),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="mt-3 rounded-3xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
+        Загрузка карты…
+      </div>
+    ),
+  }
+);
 
 export default function NewListingPage() {
   const router = useRouter();
@@ -75,7 +88,7 @@ export default function NewListingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f9f4f0]">
+    <div className="min-х-screen bg-[#f9f4f0]">
       <Header />
       <main className="mx-auto max-w-5xl px-4 pb-8 pt-4">
         <h1 className="mb-3 text-lg font-semibold text-slate-900">Новое объявление</h1>
