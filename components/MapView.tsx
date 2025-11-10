@@ -1,132 +1,73 @@
-// @ts-nocheck
+// components/MapView.tsx
 'use client';
 
-import { useEffect, useState } from 'react';
-import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
-import L from 'leaflet';
-import { hapticImpact } from '@/lib/telegram';
+import React from 'react';
 
-type MapViewProps = {
-  onLocationChange?: (lat: number, lng: number) => void;
+export type MapViewProps = {
+  latitude?: number | null;
+  longitude?: number | null;
+  [key: string]: any; // на случай, если где-то прокидываются ещё пропсы
 };
 
-const markerIcon = L.icon({
-  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41]
-});
+export function MapView(props: MapViewProps) {
+  const lat =
+    props.latitude ??
+    props.lat ??
+    null;
+  const lng =
+    props.longitude ??
+    props.lng ??
+    null;
 
-function LocationSelector({
-  onLocationChange
-}: {
-  onLocationChange?: (lat: number, lng: number) => void;
-}) {
-  useMapEvents({
-    click(e) {
-      hapticImpact('light');
-      onLocationChange?.(e.latlng.lat, e.latlng.lng);
-    }
-  });
-  return null;
-}
+  const hasCoords = typeof lat === 'number' && typeof lng === 'number';
 
-export function MapView({ onLocationChange }: MapViewProps) {
-  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
-  const [isClient, setIsClient] = useState(false);
-  const [geoError, setGeoError] = useState<string | null>(null);
-
-  function requestGeo() {
-    setGeoError(null);
-    if (!('geolocation' in navigator)) {
-      setGeoError('Геолокация недоступна в этом устройстве.');
-      return;
-    }
-    hapticImpact('light');
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const { latitude, longitude } = pos.coords;
-        setCoords({ lat: latitude, lng: longitude });
-        onLocationChange?.(latitude, longitude);
-      },
-      (err) => {
-        setGeoError('Не удалось получить геопозицию. Разрешите доступ к местоположению.');
-        console.warn(err);
-      },
-      { enableHighAccuracy: true }
-    );
-  }
-
-  useEffect(() => {
-    setIsClient(true);
-    if ('geolocation' in navigator) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const { latitude, longitude } = pos.coords;
-          setCoords({ lat: latitude, lng: longitude });
-          onLocationChange?.(latitude, longitude);
-        },
-        () => {},
-        { enableHighAccuracy: true }
-      );
-    }
-  }, [onLocationChange]);
-
-  if (!isClient) {
-    return (
-      <div className="mt-3 rounded-3xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
-        Загрузка карты…
-      </div>
-    );
-  }
+  const yandexHref = hasCoords
+    ? `https://yandex.ru/maps/?pt=${lng},${lat}&z=17&l=map`
+    : null;
 
   return (
-    <div className="mt-3 rounded-3xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
-      <div className="mb-2 flex items-center justify-between">
-        <div className="text-[11px] font-medium text-slate-700">
-          Укажите точку на карте (место, связанное с объявлением).
+    <div className="mt-2 rounded-2xl border border-slate-200 bg-slate-50 p-3">
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <div>
+          <div className="text-xs font-semibold text-slate-900">
+            Местоположение питомца
+          </div>
+          <div className="text-[11px] text-slate-500">
+            Координаты берутся из формы ниже. Карта показана для наглядности.
+          </div>
         </div>
-        <button
-          type="button"
-          onClick={requestGeo}
-          className="rounded-full bg-white px-3 py-1 text-[11px] font-medium text-slate-700 shadow-sm"
-        >
-          Определить местоположение
-        </button>
+        {hasCoords && yandexHref && (
+          <a
+            href={yandexHref}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center rounded-full bg-sky-500 px-3 py-1 text-[11px] font-semibold text-white hover:bg-sky-600"
+          >
+            Открыть в Яндекс.Картах
+          </a>
+        )}
       </div>
-      <div className="h-56 overflow-hidden rounded-2xl">
-        <MapContainer
-          center={coords ? [coords.lat, coords.lng] : [55.751244, 37.618423]}
-          zoom={12}
-          style={{ height: '100%', width: '100%' }}
-        >
-          <TileLayer
-            attribution="&copy; OpenStreetMap contributors"
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          />
-          <LocationSelector
-            onLocationChange={(lat, lng) => {
-              setCoords({ lat, lng });
-              onLocationChange?.(lat, lng);
-            }}
-          />
-          {coords && (
-            <Marker position={[coords.lat, coords.lng]} icon={markerIcon} />
-          )}
-        </MapContainer>
+
+      <div className="flex h-40 items-center justify-center rounded-xl bg-slate-200 text-[11px] text-slate-600">
+        {hasCoords ? (
+          <div className="text-center">
+            <div>Широта: {lat}</div>
+            <div>Долгота: {lng}</div>
+            <div className="mt-1 text-[10px] text-slate-500">
+              Точный вид карты можно открыть в Яндекс.Картах.
+            </div>
+          </div>
+        ) : (
+          <div className="text-center">
+            Координаты пока не указаны.
+            <br />
+            Заполните поля с широтой и долготой — здесь появится превью точки.
+          </div>
+        )}
       </div>
-      {coords && (
-        <div className="mt-2 text-[11px] text-slate-500">
-          Выбранные координаты: {coords.lat.toFixed(5)} / {coords.lng.toFixed(5)}
-        </div>
-      )}
-      {geoError && (
-        <div className="mt-1 text-[11px] text-rose-500">
-          {geoError}
-        </div>
-      )}
     </div>
   );
 }
+
+// <–– ВАЖНО: и именованный, и default экспорт ––>
+export default MapView;
