@@ -42,7 +42,6 @@ function computeAgeLabel(birthDate: string | null, ageYearsFallback: number | nu
       }
       if (years < 0) years = 0;
       if (years === 0) {
-        // считаем в месяцах
         let months = (now.getFullYear() - d.getFullYear()) * 12 + (now.getMonth() - d.getMonth());
         if (now.getDate() < d.getDate()) months -= 1;
         if (months < 0) months = 0;
@@ -131,7 +130,6 @@ export default function PassportDetailPage() {
     setMessage(null);
     hapticImpact('medium');
 
-    // пересчитаем возраст в годах для хранения
     let ageYears: number | null = null;
     if (birthDate) {
       const d = new Date(birthDate);
@@ -190,8 +188,7 @@ export default function PassportDetailPage() {
     if (!passport) return;
     hapticImpact('light');
     const url = window.location.href;
-    const ownerPart = owner?.tg_username ? `
-Владелец: @${owner.tg_username}` : '';
+    const ownerPart = owner?.tg_username ? `\nВладелец: @${owner.tg_username}` : '';
     const text = `Паспорт питомца ${passport.name}${ownerPart}`;
 
     if (navigator.share) {
@@ -241,7 +238,6 @@ export default function PassportDetailPage() {
 
         {!loading && passport && (
           <div className="space-y-4">
-            {/* Верхняя премиум-карточка */}
             <section className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#ffe2cf] via-[#ffd1e3] to-[#e3f0ff] p-5 shadow-md">
               <div className="pointer-events-none absolute -right-10 top-[-40px] h-32 w-32 rounded-full bg-white/40 blur-2xl" />
               <div className="pointer-events-none absolute -left-10 bottom-[-40px] h-32 w-32 rounded-full bg-white/30 blur-2xl" />
@@ -270,8 +266,8 @@ export default function PassportDetailPage() {
                         DIGITAL PASS
                       </span>
                       {passport.is_verified && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/90 px-2 py-0.5 text-[10px] font-semibold text-white">
-                          ✓ Верифицирован
+                        <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-[#3182f6] text-[10px] font-bold text-white">
+                          ✓
                         </span>
                       )}
                     </div>
@@ -324,6 +320,12 @@ export default function PassportDetailPage() {
                   </div>
                 </div>
               </div>
+              {passport.is_verified && (
+                <p className="relative mt-3 text-[11px] text-slate-700">
+                  Владелец подтвердил данные паспорта документами. Информация носит
+                  ознакомительный характер и не заменяет консультацию ветеринара.
+                </p>
+              )}
               <div className="relative mt-4 flex flex-wrap gap-2 text-[11px]">
                 <button
                   type="button"
@@ -347,7 +349,6 @@ export default function PassportDetailPage() {
               </div>
             </section>
 
-            {/* Блок с подробными данными / редактированием */}
             {canEdit && mode === 'edit' ? (
               <form
                 className="space-y-3 rounded-3xl bg-white p-4 shadow-sm"

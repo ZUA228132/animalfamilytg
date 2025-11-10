@@ -39,8 +39,8 @@ export default async function HomePage() {
             Animal Family
           </h1>
           <p className="mt-2 text-sm text-slate-600">
-            Уютное пространство для владельцев животных внутри Telegram. Создавайте объявления,
-            цифровые паспорта питомцев и находите друг друга по городу.
+            Уютное пространство для владельцев животных внутри Telegram. Объявления, цифровые паспорта
+            и безопасная связь через Telegram.
           </p>
           <div className="mt-4 flex flex-wrap gap-3 text-xs md:text-[13px]">
             <Link
@@ -56,7 +56,7 @@ export default async function HomePage() {
               Создать объявление
             </Link>
             <Link
-              href="/passport/new"
+              href="/passport"
               className="inline-flex items-center rounded-full bg-[#ffd1e3] px-4 py-2 font-medium text-slate-900"
             >
               Паспорт питомца
@@ -70,13 +70,36 @@ export default async function HomePage() {
           </div>
         </section>
 
-        <section className="mt-4 rounded-3xl border border-dashed border-slate-300 bg-slate-50 p-4 text-center text-xs text-slate-600">
-          <div className="mb-1 text-sm font-semibold text-slate-900">
-            Рекламное место свободно
+        {/* Рекламный баннер с ИИ-ветеринаром Степаном */}
+        <section className="mt-4 overflow-hidden rounded-3xl bg-gradient-to-r from-[#e0ecff] via-[#ffd1e3] to-[#ffe2cf] p-4 shadow-sm">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/80 text-2xl">
+                🐶
+              </div>
+              <div>
+                <h2 className="text-sm font-semibold text-slate-900">
+                  ИИ-ветеринар Степан
+                </h2>
+                <p className="mt-1 text-[11px] text-slate-700">
+                  Задавайте вопросы об уходе, питании и здоровье питомцев. Степан подскажет направление и
+                  поможет сориентироваться.
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-1 flex-col items-start gap-2 sm:items-end">
+              <Link
+                href="/vet"
+                className="inline-flex items-center rounded-full bg-slate-900 px-4 py-2 text-xs font-medium text-white"
+              >
+                Спросить Степана
+              </Link>
+              <p className="max-w-xs text-[10px] text-slate-600 text-left sm:text-right">
+                Важно: ответы Степана носят рекомендательный характер и не заменяют очный приём
+                у ветеринарного врача. Полный доступ к чату — по премиум-подписке.
+              </p>
+            </div>
           </div>
-          <p>
-            Здесь может быть ваша реклама или партнёрский проект. Настройка баннера доступна в админ-панели.
-          </p>
         </section>
 
         <AdBanner {...safeBanner} />
