@@ -85,9 +85,8 @@ export default function NewPassportPage() {
       breed,
       age_years: age ? Number(age) : null,
       vaccinations,
-      allergies
-      -- телефон пока не сохраняем в таблицу, при желании можно добавить колонку owner_phone
-    } as any);
+      allergies, // телефон пока не сохраняем в таблицу, при желании можно добавить колонку owner_phone
+    });
 
     setIsSubmitting(false);
 
