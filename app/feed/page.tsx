@@ -18,6 +18,7 @@ type Listing = {
   status: string;
   contact_tg_username: string | null;
   image_url: string | null;
+  owner_is_premium: boolean | null;
   pet_passport?: { name: string } | null;
   owner?: { badge: string | null } | null;
 };
@@ -49,6 +50,7 @@ export default function FeedPage() {
           created_at,
           contact_tg_username,
           image_url,
+          owner_is_premium,
           pet_passport:pet_passport_id(name),
           owner:owner_id(badge)
         `

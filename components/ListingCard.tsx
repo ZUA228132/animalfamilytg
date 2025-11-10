@@ -14,6 +14,7 @@ type Listing = {
   status: string;
   contact_tg_username: string | null;
   image_url: string | null;
+  owner_is_premium?: boolean | null;
   pet_passport?: { name: string } | null;
   owner?: { badge: string | null } | null;
 };
@@ -66,8 +67,18 @@ export function ListingCard({ listing }: Props) {
       <div className="flex flex-1 flex-col justify-between">
         <div className="flex items-start justify-between gap-2">
           <div className="flex flex-col gap-1">
-            <div className="text-sm font-semibold text-slate-900 line-clamp-2">
-              {listing.title}
+            <div className="flex items-center gap-1">
+              <div className="text-sm font-semibold text-slate-900 line-clamp-2">
+                {listing.title}
+              </div>
+              {listing.owner_is_premium && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-[#e0ecff] px-2 py-0.5 text-[10px] font-medium text-[#2257c4]">
+                  <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-[#3182f6] text-[9px] text-white">
+                    ✓
+                  </span>
+                  Premium
+                </span>
+              )}
             </div>
             <div className="flex flex-wrap items-center gap-1 text-[11px] text-slate-500">
               {listing.city && (

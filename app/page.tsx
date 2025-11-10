@@ -40,7 +40,8 @@ export default async function HomePage() {
             Animal Family
           </h1>
           <p className="mt-2 text-sm text-slate-600">
-            Уютное пространство для владельцев животных внутри Telegram.
+            Уютное пространство для владельцев животных внутри Telegram. Объявления, цифровые паспорта
+            и безопасная связь через Telegram.
           </p>
           <div className="mt-4 flex flex-wrap gap-3 text-xs md:text-[13px]">
             <Link
@@ -74,7 +75,7 @@ export default async function HomePage() {
         <section className="mt-4 overflow-hidden rounded-3xl bg-gradient-to-r from-[#e0ecff] via-[#ffd1e3] to-[#ffe2cf] p-4 shadow-sm">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/80 text-2xl">
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white/80 text-3xl">
                 🐶
               </div>
               <div>
@@ -111,7 +112,7 @@ export default async function HomePage() {
               Официальный бот: <span className="font-medium">@AnimalFamilyBot</span>
             </li>
             <li>Админ: @aries_nik (Telegram)</li>
-            <li>Поддержка: support@animal.family</li>
+            <li>Поддержка: support@animal.family (пример)</li>
             <li>Сайт: animal.family</li>
           </ul>
         </section>

@@ -9,6 +9,7 @@ const TelegramUserContext = createContext<TelegramUser | null>(null);
 export function TelegramProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<TelegramUser | null>(null);
   const [ready, setReady] = useState(false);
+  const [petName, setPetName] = useState<string | null>(null);
 
   useEffect(() => {
     initTelegramWebApp();
@@ -35,11 +36,45 @@ export function TelegramProvider({ children }: { children: ReactNode }) {
     }, 900);
 
     return () => clearTimeout(timeout);
+  
+  useEffect(() => {
+    async function loadPetName() {
+      try {
+        const tgUser = getTelegramUser();
+        if (!tgUser) return;
+
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('tg_id', tgUser.id)
+          .maybeSingle();
+
+        if (profileError || !profile) return;
+
+        const { data: passport, error: passportError } = await supabase
+          .from('pet_passports')
+          .select('name')
+          .eq('owner_id', profile.id)
+          .order('created_at', { ascending: true })
+          .limit(1)
+          .maybeSingle();
+
+        if (!passportError && passport && passport.name) {
+          setPetName(passport.name);
+        }
+      } catch (e) {
+        // тихо игнорируем
+      }
+    }
+
+    loadPetName();
   }, []);
+}, []);
 
   if (!ready) {
     return (
-      <div className="flex h-screen items-center justify-center bg-[#f9f4f0]">
+      <div className="flex h-screen items-center justify-center bg-[url('/fon.png')] bg-cover bg-center">
+        <div className="flex h-screen w-full items-center justify-center bg-[#f9f4f0]/85">
         <div className="animate-[fadeInUp_0.4s_ease-out] rounded-3xl bg-white/95 px-7 py-6 shadow-md">
           <style jsx global>{`
             @keyframes fadeInUp {
@@ -75,6 +110,11 @@ export function TelegramProvider({ children }: { children: ReactNode }) {
               <span className="mt-1 text-xs text-slate-500">
                 Загружаем твою Animal Family…
               </span>
+              {petName && (
+                <span className="mt-1 text-[11px] text-slate-500">
+                  И {petName} тоже большой привет)
+                </span>
+              )}
             </div>
           </div>
         </div>

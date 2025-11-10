@@ -7,6 +7,8 @@ import { useTelegramUser } from '@/components/TelegramProvider';
 import { useRouter } from 'next/navigation';
 import { hapticImpact, hapticSuccess, hapticError } from '@/lib/telegram';
 
+const ALLOWED_ADMIN_TG_IDS = [1046439138, 7086128174];
+
 type Listing = {
   id: string;
   title: string;
@@ -69,16 +71,15 @@ export default function AdminPage() {
       }
 
       const profile = profiles[0] as ProfileRow;
-      const role = (profile.role || '').toLowerCase().trim();
-      const isAdminRole = role === 'admin';
+      const isAllowedAdmin = ALLOWED_ADMIN_TG_IDS.includes(profile.tg_id);
 
       setDebugInfo(
         `Найден профиль: id=${profile.id}, tg_id=${profile.tg_id}, username=${
           profile.tg_username || 'нет'
-        }, role=${profile.role || 'null'}.`
+        }, role=${profile.role || 'null'}, isAllowedAdmin=${isAllowedAdmin}.`
       );
 
-      if (!isAdminRole) {
+      if (!isAllowedAdmin) {
         setIsAdmin(false);
         setLoading(false);
         return;
@@ -210,7 +211,7 @@ export default function AdminPage() {
             ← Назад
           </button>
           <p className="mb-2 text-xs text-slate-500">
-            Вам недоступна админ-панель.
+            Админ-панель доступна только владельцам проекта. Если вы считаете, что это ошибка, свяжитесь с @aries_nik.
           </p>
           {debugInfo && (
             <p className="text-[11px] text-slate-500">
@@ -343,6 +344,7 @@ export default function AdminPage() {
           <h2 className="text-sm font-semibold text-slate-900">
             Рекламный баннер на главной
           </h2>
+          <p className="mt-1 text-[11px] text-slate-500">Здесь редактируется баннер на главной странице Animal Family.</p>
           <div className="mt-2 space-y-2 text-xs">
             <div>
               <label className="text-xs font-medium text-slate-700">Заголовок</label>

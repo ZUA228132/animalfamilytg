@@ -98,20 +98,37 @@ export default function NewListingPage() {
     if (imageFile) {
       try {
         const path = `listing-${profile.id}-${Date.now()}-${imageFile.name}`;
-        const { error: uploadError } = await supabase.storage
+        const { data: uploadData, error: uploadError } = await supabase.storage
           .from('listings')
           .upload(path, imageFile);
 
         if (uploadError) {
           console.error('Upload error', uploadError);
-        } else {
-          const { data: publicData } = supabase.storage
-            .from('listings')
-            .getPublicUrl(path);
-          imageUrl = publicData.publicUrl;
+          setIsSubmitting(false);
+          setMessage('Не удалось загрузить фото. Попробуйте ещё раз или выберите другое изображение.');
+          hapticError();
+          return;
         }
+
+        const { data: publicData } = supabase.storage
+          .from('listings')
+          .getPublicUrl(path);
+
+        if (!publicData || !publicData.publicUrl) {
+          console.error('No public URL for uploaded image', publicData);
+          setIsSubmitting(false);
+          setMessage('Не удалось получить ссылку на фото. Попробуйте ещё раз.');
+          hapticError();
+          return;
+        }
+
+        imageUrl = publicData.publicUrl;
       } catch (err) {
         console.error('Unexpected upload error', err);
+        setIsSubmitting(false);
+        setMessage('Произошла ошибка при загрузке фото.');
+        hapticError();
+        return;
       }
     }
 
@@ -128,7 +145,8 @@ export default function NewListingPage() {
         lng,
         status: 'pending',
         contact_tg_username: profile.tg_username ?? tgUser.username ?? null,
-        image_url: imageUrl
+        image_url: imageUrl,
+        owner_is_premium: !!profile.is_premium
       });
 
     setIsSubmitting(false);
